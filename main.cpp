@@ -2,7 +2,8 @@
 #include <QDebug>
 #include <iostream>
 
-#include "graph/Graph.h"
+#include "core/graph/Graph.h"
+#include "core/pathfinding/Dijkstra.h"
 
 // 辅助打印函数（纯 C++ 控制台输出，方便调试）
 void printGraphStructure(const core::Graph& graph) {
@@ -63,6 +64,26 @@ int main(int argc, char *argv[]) {
     }
 
     std::cout << "===========================================\n\n";
+
+    std::cout << "\n========== Dijkstra 最短路径算法测试 ==========\n";
+    core::Pathfinder pathfinder(tuteGraph);
+
+    // 测试：从 正大门(1) 到 明理楼(4)
+    std::vector<int> shortestPath = pathfinder.findShortestPath(1, 4);
+
+    std::cout << "从 正大门 到 明理楼 的最短路线规划：\n";
+    if (shortestPath.empty()) {
+        std::cout << "  无法到达！\n";
+    } else {
+        for (size_t i = 0; i < shortestPath.size(); ++i) {
+            std::cout << tuteGraph.getNode(shortestPath[i])->name;
+            if (i != shortestPath.size() - 1) {
+                std::cout << " -> ";
+            }
+        }
+        std::cout << "\n";
+    }
+    std::cout << "===========================================\n";
 
     // 初期测试不需要让 Qt 的 GUI 阻塞，可以直接 return 0 结束，或者启动事件循环
     return 0;

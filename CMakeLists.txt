@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(CampusNavigator VERSION 1.0 LANGUAGES CXX)
 
-add_compile_options("$<$<CXX_COMPILER_ID:GNU>:-fexec-charset=GBK>")
+add_compile_options("-fexec-charset=GBK")
 
 # 指定 C++ 标准为 C++17
 set(CMAKE_CXX_STANDARD 17)
@@ -23,8 +23,11 @@ set(PROJECT_SOURCES
     # ui/MainWindow.cpp
     # ui/MainWindow.h
 
-    graph/Graph.h
-    graph/Graph.cpp
+    core/graph/Graph.h
+    core/graph/Graph.cpp
+
+    core/pathfinding/Dijkstra.h
+    core/pathfinding/Dijkstra.cpp
 )
 
 # 添加可执行文件
