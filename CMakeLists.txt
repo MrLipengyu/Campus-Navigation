@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.16)
 
 project(CampusNavigator VERSION 1.0 LANGUAGES CXX)
 
-add_compile_options("-fexec-charset=GBK")
-
 # 指定 C++ 标准为 C++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,10 +26,15 @@ set(PROJECT_SOURCES
 
     core/pathfinding/Dijkstra.h
     core/pathfinding/Dijkstra.cpp
+
+    resources/resources.qrc
+
+    graphics/MapView.h
+    graphics/MapView.cpp
 )
 
 # 添加可执行文件
-add_executable(${PROJECT_NAME} WIN32 ${PROJECT_SOURCES})
+add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
 
 # 链接 Qt 库
 target_link_libraries(${PROJECT_NAME} PRIVATE

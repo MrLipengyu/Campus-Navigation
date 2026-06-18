@@ -1,9 +1,11 @@
 #include <QApplication>
 #include <QDebug>
 #include <iostream>
+#include <windows.h>
 
 #include "core/graph/Graph.h"
 #include "core/pathfinding/Dijkstra.h"
+#include "graphics/MapView.h"
 
 // 辅助打印函数（纯 C++ 控制台输出，方便调试）
 void printGraphStructure(const core::Graph& graph) {
@@ -32,6 +34,8 @@ void printGraphStructure(const core::Graph& graph) {
 }
 
 int main(int argc, char *argv[]) {
+
+    SetConsoleOutputCP(CP_UTF8);
 
     QApplication app(argc, argv);
 
@@ -85,6 +89,13 @@ int main(int argc, char *argv[]) {
     }
     std::cout << "===========================================\n";
 
-    // 初期测试不需要让 Qt 的 GUI 阻塞，可以直接 return 0 结束，或者启动事件循环
-    return 0;
+    // 6. 启动 UI 视图
+    std::cout << "\n启动地图可视化视图...\n";
+    graphics::MapView mapView(tuteGraph);
+    mapView.setWindowTitle("天津理工大学 - 校园导航系统 v1.0");
+    mapView.resize(1024, 768); // 初始窗口大小
+    mapView.show();
+
+    // 正式进入 Qt 的事件循环（窗口不会一闪而过）
+    return app.exec();
 }
