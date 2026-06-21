@@ -29,7 +29,7 @@ MapView::MapView(const core::Graph& graph, QWidget* parent)
 
 void MapView::setupBackground() {
     // 从资源文件中加载你的地图图片
-    QPixmap mapPixmap(":/campus_map.jpg");
+    QPixmap mapPixmap(":/campus_map.png");
     
     if (!mapPixmap.isNull()) {
         m_scene->addPixmap(mapPixmap);
@@ -68,6 +68,10 @@ void MapView::renderGraph() {
     // 2. 再画所有的节点 (盖在边上面)
     int radius = 10; // 节点半径
     for (const auto& [id, node] : nodes) {
+        //判断是否为建筑节点（空节点不画）
+        if (node.name.empty()) {
+            continue;
+        }
         // 绘制圆形 (注意：Qt绘图的坐标是以左上角为起点的，所以需要偏移半径让中心对齐x,y)
         m_scene->addEllipse(node.x - radius, node.y - radius, 
                             radius * 2, radius * 2, 
@@ -90,6 +94,33 @@ void MapView::wheelEvent(QWheelEvent* event) {
     } else {
         scale(1.0 / scaleFactor, 1.0 / scaleFactor); // 缩小
     }
+}
+void MapView::mousePressEvent(QMouseEvent* event) {
+    // 将鼠标点击的窗口坐标，转换为地图图片的真实像素坐标
+    QPointF scenePos = mapToScene(event->pos());
+
+    // 1. 自动生成 JSON 输出到控制台
+    qDebug().noquote() << "{ \"id\": " << m_debugId << ", \"name\": \"\", \"x\": "
+                       << (int)scenePos.x() << ", \"y\": " << (int)scenePos.y() << " },";
+
+    // 2. 🌟 神奇魔法：在地图上留下一个临时的红色记号和 ID！
+    int radius = 5;
+    m_scene->addEllipse(scenePos.x() - radius, scenePos.y() - radius, radius*2, radius*2,
+                        QPen(Qt::red), QBrush(Qt::red));
+
+    QGraphicsTextItem* textItem = m_scene->addText(QString::number(m_debugId));
+    textItem->setDefaultTextColor(Qt::blue); // 用蓝色大字显示 ID
+    QFont font = textItem->font();
+    font.setPointSize(10);
+    font.setBold(true);
+    textItem->setFont(font);
+    textItem->setPos(scenePos.x() + 5, scenePos.y() - 15);
+
+    // 3. ID 自动 +1，为下一次点击做准备
+    m_debugId++;
+
+    // 保持原有的拖拽功能正常工作
+    QGraphicsView::mousePressEvent(event);
 }
 
 } // namespace graphics

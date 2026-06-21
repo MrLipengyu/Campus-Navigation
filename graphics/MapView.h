@@ -16,6 +16,8 @@ public:
 protected:
     // 重写滚轮事件，实现地图的缩放
     void wheelEvent(QWheelEvent* event) override;
+    //* 新增：鼠标点击事件
+    void mousePressEvent(QMouseEvent *event) override;
 
 private:
     // 初始化地图背景
@@ -26,6 +28,9 @@ private:
 private:
     QGraphicsScene* m_scene;
     const core::Graph& m_graph;
+
+    //临时变量
+    int m_debugId = 101;
 };
 
 } // namespace graphics

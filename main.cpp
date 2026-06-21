@@ -3,8 +3,8 @@
 #include <iostream>
 #include <windows.h>
 
+//#include "core/pathfinding/Dijkstra.h"
 #include "core/graph/Graph.h"
-#include "core/pathfinding/Dijkstra.h"
 #include "graphics/MapView.h"
 
 // 辅助打印函数（纯 C++ 控制台输出，方便调试）
@@ -44,6 +44,8 @@ int main(int argc, char *argv[]) {
 
     // 1. 实例化图
     core::Graph tuteGraph;
+
+    /*
 
     // 2. 添加天津理工大学的几个核心节点 (ID, 名称, 简介, X坐标, Y坐标)
     tuteGraph.addNode(1, "正大门", "天津理工大学主校门", 100, 500);
@@ -88,6 +90,8 @@ int main(int argc, char *argv[]) {
         std::cout << "\n";
     }
     std::cout << "===========================================\n";
+
+    */
 
     // 6. 启动 UI 视图
     std::cout << "\n启动地图可视化视图...\n";
