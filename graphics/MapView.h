@@ -1,36 +1,36 @@
 #pragma once
 #include <QGraphicsView>
 #include <QGraphicsScene>
-#include "../core/graph/Graph.h"
+#include "../core/map/CampusMap.h" // 引入 CampusMap
 
 namespace graphics {
 
 class MapView : public QGraphicsView {
-    Q_OBJECT // Qt的宏，用于支持信号与槽
+    Q_OBJECT
 
 public:
-    // 构造函数：传入底层的Graph常量引用
-    explicit MapView(const core::Graph& graph, QWidget* parent = nullptr);
-    ~MapView() = default;
+    explicit MapView(const core::CampusMap& campusMap, QWidget* parent = nullptr);
+
+    // 新增：绘制高亮导航路径的方法
+    void drawPath(const std::vector<int>& pathNodeIds);
+    // 新增：清除高亮路径
+    void clearPath();
 
 protected:
-    // 重写滚轮事件，实现地图的缩放
     void wheelEvent(QWheelEvent* event) override;
-    //* 新增：鼠标点击事件
     void mousePressEvent(QMouseEvent *event) override;
 
 private:
-    // 初始化地图背景
     void setupBackground();
-    // 渲染图结构的节点和边
-    void renderGraph();
+    void renderGraph();     // 现在只画路（线段）和纯节点（小圆点）
+    void renderBuildings(); // 新增：专门画建筑（名字）
 
 private:
     QGraphicsScene* m_scene;
-    const core::Graph& m_graph;
+    const core::CampusMap& m_campusMap; // 核心数据源变成了 CampusMap
 
-    //临时变量
-    int m_debugId = 101;
+    // 用于保存当前高亮路径图元的指针，方便后续清除
+    std::vector<QGraphicsItem*> m_pathItems;
 };
 
 } // namespace graphics

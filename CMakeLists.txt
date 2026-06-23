@@ -31,6 +31,11 @@ set(PROJECT_SOURCES
 
     graphics/MapView.h
     graphics/MapView.cpp
+
+    core/map/Building.h
+
+    core/map/CampusMap.h
+    core/map/CampusMap.cpp
 )
 
 # 添加可执行文件

@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>campus_map.png</file>
+        <file>map_data_fuben.json</file>
     </qresource>
 </RCC>

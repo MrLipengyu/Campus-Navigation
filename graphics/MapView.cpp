@@ -6,120 +6,151 @@
 #include <QWheelEvent>
 #include <QPen>
 #include <QBrush>
+#include <QDebug>
 
 namespace graphics {
 
-MapView::MapView(const core::Graph& graph, QWidget* parent)
-    : QGraphicsView(parent), m_graph(graph) {
-    
+MapView::MapView(const core::CampusMap& campusMap, QWidget* parent)
+    : QGraphicsView(parent), m_campusMap(campusMap) {
+
     // 1. 初始化场景
     m_scene = new QGraphicsScene(this);
     setScene(m_scene);
 
     // 2. 优化渲染质量与交互体验
-    setRenderHint(QPainter::Antialiasing); // 开启抗锯齿
+    setRenderHint(QPainter::Antialiasing); // 开启抗锯齿，线条更平滑
     setDragMode(QGraphicsView::ScrollHandDrag); // 允许鼠标拖拽平移地图
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); // 隐藏滚动条
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    // 3. 绘制内容
+    // 3. 按层级顺序绘制内容
     setupBackground();
-    renderGraph();
+    renderGraph();     // 画纯路网
+    renderBuildings(); // 画业务建筑
 }
 
 void MapView::setupBackground() {
-    // 从资源文件中加载你的地图图片
     QPixmap mapPixmap(":/campus_map.png");
-    
     if (!mapPixmap.isNull()) {
-        m_scene->addPixmap(mapPixmap);
-        // 设定场景大小与图片一致
-        m_scene->setSceneRect(mapPixmap.rect()); 
+        QGraphicsPixmapItem* bgItem = m_scene->addPixmap(mapPixmap);
+        bgItem->setZValue(0.0); // 最底层
+        m_scene->setSceneRect(mapPixmap.rect());
     } else {
-        // 如果图片加载失败，给个默认大小，方便调试
-        m_scene->setSceneRect(0, 0, 1000, 800);
+        qWarning() << "警告：未找到地图背景图片，请检查 qrc 资源配置！";
+        m_scene->setSceneRect(0, 0, 1920, 1080);
     }
 }
 
 void MapView::renderGraph() {
-    const auto& nodes = m_graph.getAllNodes();
+    const auto& graph = m_campusMap.getGraph();
+    const auto& nodes = graph.getAllNodes();
 
-    // 准备画笔和画刷
-    QPen edgePen(QColor(150, 150, 150, 180)); // 半透明灰色的道路
-    edgePen.setWidth(4);
-    
-    QBrush nodeBrush(QColor(65, 105, 225));   // 皇家蓝的节点
-    QPen nodePen(Qt::white);                  // 节点白边
-    nodePen.setWidth(2);
+    QPen edgePen(QColor(150, 150, 150, 120)); // 半透明浅灰色，避免抢风头
+    edgePen.setWidth(3);
 
-    // 1. 先画所有的边 (压在节点下面)
+    QBrush nodeBrush(QColor(100, 100, 100, 180)); // 灰色节点
+    QPen nodePen(Qt::NoPen);
+    int nodeRadius = 4; // 节点画小一点，作为底层路网参考
+
+    // 1. 画边 (Z-Value: 1.0)
     for (const auto& [id, node] : nodes) {
         for (const auto& edge : node.edges) {
-            // 避免无向图重复画线：只画 id < toNodeId 的线
-            if (id < edge.toNodeId) {
-                const auto* toNode = m_graph.getNode(edge.toNodeId);
+            if (id < edge.toNodeId) { // 无向图防重复绘制
+                const auto* toNode = graph.getNode(edge.toNodeId);
                 if (toNode) {
-                    m_scene->addLine(node.x, node.y, toNode->x, toNode->y, edgePen);
+                    QGraphicsLineItem* line = m_scene->addLine(
+                        node.x, node.y, toNode->x, toNode->y, edgePen);
+                    line->setZValue(1.0);
                 }
             }
         }
     }
 
-    // 2. 再画所有的节点 (盖在边上面)
-    int radius = 10; // 节点半径
+    // 2. 画节点 (Z-Value: 2.0)
     for (const auto& [id, node] : nodes) {
-        //判断是否为建筑节点（空节点不画）
-        if (node.name.empty()) {
-            continue;
-        }
-        // 绘制圆形 (注意：Qt绘图的坐标是以左上角为起点的，所以需要偏移半径让中心对齐x,y)
-        m_scene->addEllipse(node.x - radius, node.y - radius, 
-                            radius * 2, radius * 2, 
-                            nodePen, nodeBrush);
-
-        // 绘制文字标签
-        QGraphicsTextItem* textItem = m_scene->addText(QString::fromStdString(node.name));
-        textItem->setDefaultTextColor(Qt::black);
-        // 将文字放在节点正下方
-        textItem->setPos(node.x - textItem->boundingRect().width() / 2, node.y + radius);
+        QGraphicsEllipseItem* dot = m_scene->addEllipse(
+            node.x - nodeRadius, node.y - nodeRadius,
+            nodeRadius * 2, nodeRadius * 2,
+            nodePen, nodeBrush);
+        dot->setZValue(2.0);
     }
+}
+
+void MapView::renderBuildings() {
+    const auto& buildings = m_campusMap.getAllBuildings();
+
+    QFont font("Microsoft YaHei", 10, QFont::Bold); // 微软雅黑加粗
+
+    // 画建筑物 (Z-Value: 3.0)
+    for (const auto& [id, b] : buildings) {
+        // ① 绘制建筑名字背景框 (为了让文字在复杂背景上更清晰)
+        QGraphicsTextItem* textItem = m_scene->addText(QString::fromStdString(b.name), font);
+        textItem->setDefaultTextColor(Qt::darkBlue);
+
+        // 计算居中位置
+        qreal textX = b.ui_x - textItem->boundingRect().width() / 2.0;
+        qreal textY = b.ui_y - textItem->boundingRect().height() / 2.0;
+        textItem->setPos(textX, textY);
+        textItem->setZValue(3.1);
+
+        // 半透明白色背景底框
+        QGraphicsRectItem* bgRect = m_scene->addRect(
+            textX, textY, textItem->boundingRect().width(), textItem->boundingRect().height(),
+            QPen(Qt::NoPen), QBrush(QColor(255, 255, 255, 200)));
+        bgRect->setZValue(3.0);
+    }
+}
+
+void MapView::drawPath(const std::vector<int>& pathNodeIds) {
+    clearPath(); // 画新路径前先清空老路径
+
+    if (pathNodeIds.size() < 2) return;
+
+    const auto& graph = m_campusMap.getGraph();
+
+    // 设置高亮画笔：粗壮、红色、圆滑线帽和拐角
+    QPen pathPen(QColor(255, 50, 50, 220));
+    pathPen.setWidth(6);
+    pathPen.setCapStyle(Qt::RoundCap);
+    pathPen.setJoinStyle(Qt::RoundJoin);
+
+    for (size_t i = 0; i < pathNodeIds.size() - 1; ++i) {
+        const auto* n1 = graph.getNode(pathNodeIds[i]);
+        const auto* n2 = graph.getNode(pathNodeIds[i+1]);
+
+        if (n1 && n2) {
+            QGraphicsLineItem* line = m_scene->addLine(
+                n1->x, n1->y, n2->x, n2->y, pathPen);
+            line->setZValue(4.0); // 最高层级！不会被建筑或底图遮挡
+            m_pathItems.push_back(line); // 存入容器以便后续销毁
+        }
+    }
+}
+
+void MapView::clearPath() {
+    // 内存管理最佳实践：从场景移除并 delete
+    for (QGraphicsItem* item : m_pathItems) {
+        m_scene->removeItem(item);
+        delete item;
+    }
+    m_pathItems.clear();
 }
 
 void MapView::wheelEvent(QWheelEvent* event) {
-    // 实现鼠标滚轮缩放逻辑
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     double scaleFactor = 1.15;
     if (event->angleDelta().y() > 0) {
-        scale(scaleFactor, scaleFactor); // 放大
+        scale(scaleFactor, scaleFactor);
     } else {
-        scale(1.0 / scaleFactor, 1.0 / scaleFactor); // 缩小
+        scale(1.0 / scaleFactor, 1.0 / scaleFactor);
     }
 }
+
 void MapView::mousePressEvent(QMouseEvent* event) {
-    // 将鼠标点击的窗口坐标，转换为地图图片的真实像素坐标
+    // 暂时保留，后续这里会改造成“点击建筑设定起点/终点”
     QPointF scenePos = mapToScene(event->pos());
+    qDebug() << "鼠标点击地图坐标: (" << scenePos.x() << ", " << scenePos.y() << ")";
 
-    // 1. 自动生成 JSON 输出到控制台
-    qDebug().noquote() << "{ \"id\": " << m_debugId << ", \"name\": \"\", \"x\": "
-                       << (int)scenePos.x() << ", \"y\": " << (int)scenePos.y() << " },";
-
-    // 2. 🌟 神奇魔法：在地图上留下一个临时的红色记号和 ID！
-    int radius = 5;
-    m_scene->addEllipse(scenePos.x() - radius, scenePos.y() - radius, radius*2, radius*2,
-                        QPen(Qt::red), QBrush(Qt::red));
-
-    QGraphicsTextItem* textItem = m_scene->addText(QString::number(m_debugId));
-    textItem->setDefaultTextColor(Qt::blue); // 用蓝色大字显示 ID
-    QFont font = textItem->font();
-    font.setPointSize(10);
-    font.setBold(true);
-    textItem->setFont(font);
-    textItem->setPos(scenePos.x() + 5, scenePos.y() - 15);
-
-    // 3. ID 自动 +1，为下一次点击做准备
-    m_debugId++;
-
-    // 保持原有的拖拽功能正常工作
     QGraphicsView::mousePressEvent(event);
 }
 

@@ -2,10 +2,10 @@
 
 namespace core {
 
-void Graph::addNode(int id, const std::string& name, const std::string& info, int x, int y) {
+void Graph::addNode(int id, int x, int y) {
     // 只有当节点不存在时才添加
     if (m_nodes.find(id) == m_nodes.end()) {
-        m_nodes[id] = {id, name, info, x, y, {}};
+        m_nodes[id] = {id, x, y, {}};
     }
 }
 
