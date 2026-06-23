@@ -79,25 +79,44 @@ void MapView::renderGraph() {
 void MapView::renderBuildings() {
     const auto& buildings = m_campusMap.getAllBuildings();
 
-    QFont font("Microsoft YaHei", 10, QFont::Bold); // 微软雅黑加粗
+    // 使用稍微小一点、粗体的无衬线字体，看起来更现代
+    QFont font("Microsoft YaHei", 9, QFont::Bold);
 
-    // 画建筑物 (Z-Value: 3.0)
     for (const auto& [id, b] : buildings) {
-        // ① 绘制建筑名字背景框 (为了让文字在复杂背景上更清晰)
+        // 1. 生成文字图元
         QGraphicsTextItem* textItem = m_scene->addText(QString::fromStdString(b.name), font);
-        textItem->setDefaultTextColor(Qt::darkBlue);
+        textItem->setDefaultTextColor(Qt::black); // 纯黑字
 
-        // 计算居中位置
-        qreal textX = b.ui_x - textItem->boundingRect().width() / 2.0;
-        qreal textY = b.ui_y - textItem->boundingRect().height() / 2.0;
-        textItem->setPos(textX, textY);
-        textItem->setZValue(3.1);
+        // 2. 计算完美的背景框大小（包含 Padding 内边距）
+        qreal paddingX = 6.0;
+        qreal paddingY = 2.0;
+        QRectF textRect = textItem->boundingRect();
+        qreal bgWidth = textRect.width() + paddingX * 2;
+        qreal bgHeight = textRect.height() + paddingY * 2;
 
-        // 半透明白色背景底框
-        QGraphicsRectItem* bgRect = m_scene->addRect(
-            textX, textY, textItem->boundingRect().width(), textItem->boundingRect().height(),
-            QPen(Qt::NoPen), QBrush(QColor(255, 255, 255, 200)));
-        bgRect->setZValue(3.0);
+        // 计算中心点坐标，使标签的中心对准 JSON 里的 ui_x 和 ui_y
+        qreal x = b.ui_x - bgWidth / 2.0;
+        qreal y = b.ui_y - bgHeight / 2.0;
+
+        // 3. 画一个漂亮的圆角矩形背景
+        QPainterPath path;
+        path.addRoundedRect(QRectF(x, y, bgWidth, bgHeight), 4.0, 4.0); // 4.0是圆角半径
+
+        QGraphicsPathItem* bgItem = m_scene->addPath(path,
+                                                     QPen(QColor(150, 150, 150, 180), 1),     // 浅灰色边框
+                                                     QBrush(QColor(255, 255, 255, 220)));     // 半透明白色背景
+
+        // 4. 设置层级
+        bgItem->setZValue(3.0);
+
+        // 文字需要稍微偏移一点来居中对齐到背景框里
+        textItem->setPos(x + paddingX, y + paddingY);
+        textItem->setZValue(3.1); // 文字在背景框之上
+
+        // 🌟【架构铺垫】：利用 setData 把建筑的真实 ID 塞进这两个图元的肚子里！
+        // 这样以后用户无论点到背景还是文字，我们都能直接提取出 ID，而不用去算坐标！
+        bgItem->setData(0, b.id);
+        textItem->setData(0, b.id);
     }
 }
 
