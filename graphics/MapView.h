@@ -16,6 +16,9 @@ public:
     // 新增：清除高亮路径
     void clearPath();
 
+signals:
+    void buildingClicked(int buildingId);
+
 protected:
     void wheelEvent(QWheelEvent* event) override;
     void mousePressEvent(QMouseEvent *event) override;

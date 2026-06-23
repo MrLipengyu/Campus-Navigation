@@ -32,10 +32,20 @@ set(PROJECT_SOURCES
     graphics/MapView.h
     graphics/MapView.cpp
 
+    #graphics/CharacterItem.h
+    #graphics/CharacterItem.cpp
+
     core/map/Building.h
 
     core/map/CampusMap.h
     core/map/CampusMap.cpp
+
+    controller/NavigationController.h
+    controller/NavigationController.cpp
+
+    ui/MainWindow.h
+    ui/MainWindow.cpp
+
 )
 
 # 添加可执行文件

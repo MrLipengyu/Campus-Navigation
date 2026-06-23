@@ -1,4 +1,5 @@
 #include "MapView.h"
+
 #include <QGraphicsPixmapItem>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
@@ -166,10 +167,26 @@ void MapView::wheelEvent(QWheelEvent* event) {
 }
 
 void MapView::mousePressEvent(QMouseEvent* event) {
-    // 暂时保留，后续这里会改造成“点击建筑设定起点/终点”
-    QPointF scenePos = mapToScene(event->pos());
-    qDebug() << "鼠标点击地图坐标: (" << scenePos.x() << ", " << scenePos.y() << ")";
+    // 1. 获取鼠标在视图中的点击位置，并找到该位置最顶层的图元 (Item)
+    QGraphicsItem* clickedItem = itemAt(event->pos());
 
+    // 2. 判断是否点到了东西
+    if (clickedItem) {
+        // 3. 尝试读取我们在 renderBuildings 中用 setData 埋进去的建筑 ID
+        // data(0) 对应我们在 setData(0, b.id) 中设定的键值
+        QVariant itemData = clickedItem->data(0);
+
+        // 4. 如果读取到的数据有效（说明点到的是建筑标签或背景框）
+        if (itemData.isValid()) {
+            int buildingId = itemData.toInt(); // 转换为 int 型的建筑 ID
+            qDebug() << "[UI 层] 捕获到鼠标点击，建筑 ID:" << buildingId;
+
+            // 5. 🌟 核心操作：发射信号，将 ID 广播出去！Controller 会监听这个信号
+            emit buildingClicked(buildingId);
+        }
+    }
+
+    // 6. 别忘了调用父类的默认处理逻辑，保证地图依然可以被鼠标拖拽
     QGraphicsView::mousePressEvent(event);
 }
 
