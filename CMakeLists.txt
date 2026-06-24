@@ -32,8 +32,8 @@ set(PROJECT_SOURCES
     graphics/MapView.h
     graphics/MapView.cpp
 
-    #graphics/CharacterItem.h
-    #graphics/CharacterItem.cpp
+    graphics/CharacterItem.h
+    graphics/CharacterItem.cpp
 
     core/map/Building.h
 

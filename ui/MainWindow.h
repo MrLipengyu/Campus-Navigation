@@ -9,6 +9,8 @@
 #include <QCompleter>   // 新增：自动补全器
 #include <QStringList>  // 新增：字符串列表
 
+#include <QGroupBox>    // 👇 新增
+#include <QRadioButton> // 👇 新增
 #include "../core/map/CampusMap.h"
 #include "../graphics/MapView.h"
 #include "../controller/NavigationController.h"
@@ -64,6 +66,11 @@ private:
 
     // 记录当前信息面板正在展示的建筑 ID
     int m_currentSelectedBuildingId = -1;
+
+    // 👇 新增：左侧环境面板组件
+    QGroupBox* m_envGroup;        // “系统与环境”分组框
+    QRadioButton* m_radioWalk;    // 步行单选钮
+    QRadioButton* m_radioRun;     // 奔跑单选钮
 };
 
 } // namespace ui

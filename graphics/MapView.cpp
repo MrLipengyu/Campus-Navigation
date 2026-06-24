@@ -1,13 +1,8 @@
 #include "MapView.h"
 
-#include <QGraphicsPixmapItem>
-#include <QGraphicsEllipseItem>
-#include <QGraphicsLineItem>
-#include <QGraphicsTextItem>
-#include <QWheelEvent>
-#include <QPen>
-#include <QBrush>
+#include <QKeyEvent>
 #include <QDebug>
+#include <cmath> // 用于 std::hypot 计算向量长度
 
 namespace graphics {
 
@@ -28,6 +23,21 @@ MapView::MapView(const core::CampusMap& campusMap, QWidget* parent)
     setupBackground();
     renderGraph();     // 画纯路网
     renderBuildings(); // 画业务建筑
+
+    // ================== 🌟 新增主角登场 ==================
+    m_character = new CharacterItem();
+    m_scene->addItem(m_character);
+
+    // 我们把小人的初始位置放到“正大门”或者地图中心，这里暂时设为坐标 (800, 400)
+    // 后续你可以根据你的 JSON 数据选一个大门的 ui_x 和 ui_y
+    m_character->setPos(800, 400);
+
+    // ================== 🌟 初始化游戏引擎 ==================
+    m_gameTimer = new QTimer(this);
+    // 将定时器的 timeout 信号连接到我们的 gameLoop 函数上
+    connect(m_gameTimer, &QTimer::timeout, this, &MapView::gameLoop);
+    // 开启定时器，16毫秒执行一次，即 1000ms / 16ms ≈ 60 FPS (60帧/秒)
+    m_gameTimer->start(16);
 }
 
 void MapView::setupBackground() {
@@ -156,6 +166,13 @@ void MapView::clearPath() {
     m_pathItems.clear();
 }
 
+// 👇 新增方法实现
+void MapView::setCharacterSpeed(qreal speed) {
+    if (m_character) {
+        m_character->setSpeed(speed);
+    }
+}
+
 void MapView::wheelEvent(QWheelEvent* event) {
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     double scaleFactor = 1.15;
@@ -163,6 +180,54 @@ void MapView::wheelEvent(QWheelEvent* event) {
         scale(scaleFactor, scaleFactor);
     } else {
         scale(1.0 / scaleFactor, 1.0 / scaleFactor);
+    }
+}
+
+// 👇 1. 按下按键：把按键记在“小本本”上
+void MapView::keyPressEvent(QKeyEvent *event) {
+    // 忽略操作系统的“自动重复”长按机制，我们只关心真实的物理按下
+    if (!event->isAutoRepeat()) {
+        m_pressedKeys.insert(event->key());
+    }
+}
+
+// 👇 2. 松开按键：从“小本本”上擦除
+void MapView::keyReleaseEvent(QKeyEvent *event) {
+    if (!event->isAutoRepeat()) {
+        m_pressedKeys.remove(event->key());
+    }
+}
+
+// 👇 3. 🌟 核心引擎：每 16ms 自动调用一次！
+void MapView::gameLoop() {
+    // 如果没有按键被按下，直接返回，什么都不做
+    if (m_pressedKeys.isEmpty()) return;
+
+    qreal dx = 0.0;
+    qreal dy = 0.0;
+
+    // 检查集合里同时包含哪些按键，实现八向移动
+    if (m_pressedKeys.contains(Qt::Key_W)) dy -= 1.0;
+    if (m_pressedKeys.contains(Qt::Key_S)) dy += 1.0;
+    if (m_pressedKeys.contains(Qt::Key_A)) dx -= 1.0;
+    if (m_pressedKeys.contains(Qt::Key_D)) dx += 1.0;
+
+    // 如果 x 和 y 都没有变化，说明可能同时按下了 W 和 S 抵消了
+    if (dx != 0.0 || dy != 0.0) {
+
+        // 【高级技巧：向量归一化】
+        // 如果不做处理，斜着走（比如右下 dx=1, dy=1）的速度会是直走的 1.414 倍。
+        // 用勾股定理计算出向量长度，然后将 dx 和 dy 除以这个长度，保证八个方向速度绝对一致！
+        double length = std::hypot(dx, dy);
+        dx /= length;
+        dy /= length;
+
+        // 命令角色移动（因为是 60帧/秒，所以如果你觉得现在走得太快/太慢，
+        // 请去 CharacterItem.h 里把 m_speed 调小，比如调成 3.0 或 5.0）
+        m_character->moveByOffset(dx, dy);
+
+        // 🌟【关键修复】：强行让 MapView 的镜头中心对准角色的当前位置！
+        centerOn(m_character);
     }
 }
 

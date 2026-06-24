@@ -35,11 +35,38 @@ void MainWindow::setupUI() {
     mainLayout->setContentsMargins(10, 10, 10, 10);
     mainLayout->setSpacing(15);
 
-    // ================= 左侧：地图区域 =================
-    m_mapView = new graphics::MapView(m_campusMap, this);
-    mainLayout->addWidget(m_mapView, 4);
+    // ================= 1: 左侧：系统与环境面板 (新增) =================
+    QVBoxLayout* leftPanelLayout = new QVBoxLayout();
 
-    // ================= 右侧：信息与控制面板 =================
+    m_envGroup = new QGroupBox("系统与环境设置", this);
+    m_envGroup->setFont(QFont("Microsoft YaHei", 10, QFont::Bold));
+    m_envGroup->setStyleSheet("QGroupBox { border: 1px solid #bdc3c7; border-radius: 5px; margin-top: 10px; padding-top: 15px; } "
+                              "QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px; color: #34495e; }");
+
+    // 组装内部单选按钮
+    QVBoxLayout* envLayout = new QVBoxLayout(m_envGroup);
+    envLayout->setSpacing(15);
+
+    m_radioWalk = new QRadioButton("🚶 步行模式 (正常)", this);
+    m_radioRun = new QRadioButton("🏃 奔跑模式 (加速)", this);
+    m_radioWalk->setFont(QFont("Microsoft YaHei", 10));
+    m_radioRun->setFont(QFont("Microsoft YaHei", 10));
+
+    // 默认选中步行
+    m_radioWalk->setChecked(true);
+
+    envLayout->addWidget(m_radioWalk);
+    envLayout->addWidget(m_radioRun);
+    envLayout->addStretch(); // 把按钮往上顶
+
+    leftPanelLayout->addWidget(m_envGroup);
+    // 后续可以继续在这里添加：天气系统 GroupBox、昼夜系统 GroupBox 等等...
+    leftPanelLayout->addStretch(); // 整体往上顶
+
+    // ================= 2: 中间：地图区域 =================
+    m_mapView = new graphics::MapView(m_campusMap, this);
+
+    // ================= 3: 右侧：信息与控制面板 =================
     QVBoxLayout* rightPanelLayout = new QVBoxLayout();
 
     // 1. 🔍 搜索模块
@@ -65,7 +92,7 @@ void MainWindow::setupUI() {
     m_buildingInfoText->setStyleSheet("background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; padding: 10px;");
     rightPanelLayout->addWidget(m_buildingInfoText);
 
-    // ========== 4. 🚩 交互按钮与状态显示模块 ==========
+    // 4. 🚩 交互按钮与状态显示模块
     QVBoxLayout* controlLayout = new QVBoxLayout(); // 使用垂直布局包住按钮和状态
 
     QHBoxLayout* btnLayout = new QHBoxLayout();
@@ -92,11 +119,29 @@ void MainWindow::setupUI() {
     // 把整个控制区加入右侧主面板
     rightPanelLayout->addLayout(controlLayout);
 
-    mainLayout->addLayout(rightPanelLayout, 1);
-
     // 🌟 绑定按钮点击信号到内部槽函数
     connect(m_btnSetStart, &QPushButton::clicked, this, &MainWindow::onBtnSetStartClicked);
     connect(m_btnSetEnd, &QPushButton::clicked, this, &MainWindow::onBtnSetEndClicked);
+
+    // =================4: 组装三栏布局 =================
+    // 设置比例： 左侧占 1.5 份，中间占 6 份，右侧占 2 份。你可以根据实际视觉效果微调！
+    mainLayout->addLayout(leftPanelLayout, 1);
+    mainLayout->addWidget(m_mapView, 6);
+    mainLayout->addLayout(rightPanelLayout, 2);
+
+    // =================5: 绑定左侧按钮逻辑 =================
+    // 🌟 核心绑定：当单选按钮状态改变时，通知 MapView 改变角色速度
+    connect(m_radioWalk, &QRadioButton::toggled, this, [this](bool checked){
+        if (checked) {
+            m_mapView->setCharacterSpeed(2.0); // 步行速度，可根据你的帧率手感微调
+        }
+    });
+
+    connect(m_radioRun, &QRadioButton::toggled, this, [this](bool checked){
+        if (checked) {
+            m_mapView->setCharacterSpeed(4.0); // 奔跑速度设定为步行的两倍
+        }
+    });
 }
 
 void MainWindow::setupSearchCompleter() {
