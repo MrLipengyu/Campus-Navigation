@@ -31,6 +31,9 @@ public:
     void startAutoNavigation(const std::vector<int>& pathNodeIds);
     void stopAutoNavigation();
 
+    // 👇 新增：向外提供切换昼夜的接口
+    void setNightMode(bool isNight);
+
 signals:
     void buildingClicked(int buildingId);
 
@@ -54,6 +57,9 @@ private:
     void setupBackground();
     void renderGraph();     // 现在只画路（线段）和纯节点（小圆点）
     void renderBuildings(); // 新增：专门画建筑（名字）
+
+    // 👇 新增：夜间滤镜图元
+    QGraphicsRectItem* m_nightOverlay = nullptr;
 
 private:
     QGraphicsScene* m_scene;

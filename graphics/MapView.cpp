@@ -42,13 +42,34 @@ MapView::MapView(const core::CampusMap& campusMap, QWidget* parent)
 
 void MapView::setupBackground() {
     QPixmap mapPixmap(":/campus_map.png");
+
     if (!mapPixmap.isNull()) {
         QGraphicsPixmapItem* bgItem = m_scene->addPixmap(mapPixmap);
-        bgItem->setZValue(0.0); // 最底层
+        bgItem->setZValue(0.0);
         m_scene->setSceneRect(mapPixmap.rect());
     } else {
-        qWarning() << "警告：未找到地图背景图片，请检查 qrc 资源配置！";
         m_scene->setSceneRect(0, 0, 1920, 1080);
+    }
+
+    // ================== 🌟 新增：夜间滤镜层 ==================
+    // 画一个跟场景一样大的矩形
+    m_nightOverlay = m_scene->addRect(m_scene->sceneRect());
+
+    // 设置无边框，填充半透明的深藏青色 (模拟夜晚)
+    m_nightOverlay->setPen(Qt::NoPen);
+    m_nightOverlay->setBrush(QColor(10, 15, 45, 160)); // R, G, B, Alpha(透明度)
+
+    // 【架构精髓】：将其放在地图(0.0)之上，但道路(1.0)和建筑(3.0)之下！
+    m_nightOverlay->setZValue(0.5);
+
+    // 默认是白天，隐藏滤镜
+    m_nightOverlay->setVisible(false);
+}
+
+// 👇 新增：对外接口
+void MapView::setNightMode(bool isNight) {
+    if (m_nightOverlay) {
+        m_nightOverlay->setVisible(isNight);
     }
 }
 

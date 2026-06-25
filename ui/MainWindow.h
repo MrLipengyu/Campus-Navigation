@@ -14,6 +14,7 @@
 #include <QDialog>
 #include <QTextEdit>
 #include <QMessageBox>
+#include <QCheckBox> // 👇 新增头文件
 
 #include "../core/map/CampusMap.h"
 #include "../graphics/MapView.h"
@@ -70,6 +71,8 @@ private:
     QPushButton* m_btnSetStart;       // 🚩 设为起点按钮
     QPushButton* m_btnSetEnd;         // 🏁 设为终点按钮
 
+    QPushButton* m_btnEditInfo; // 👇 新增：管理员编辑按钮
+
     // 👇 3. 新增：用于在界面上显示当前选中的起终点名称
     QLabel* m_lblCurrentStart;
     QLabel* m_lblCurrentEnd;
@@ -82,7 +85,8 @@ private:
     QRadioButton* m_radioWalk;    // 步行单选钮
     QRadioButton* m_radioRun;     // 奔跑单选钮
 
-    QPushButton* m_btnEditInfo; // 👇 新增：管理员编辑按钮
+    // 👇 新增：昼夜切换开关
+    QCheckBox* m_checkNightMode;
 };
 
 } // namespace ui
