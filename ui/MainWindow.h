@@ -39,6 +39,9 @@ private slots:
     void onBtnSetStartClicked();
     void onBtnSetEndClicked();
 
+    // 👇 新增：响应控制器重置状态的槽函数
+    void onNavigationStateReset();
+
 private:
     void setupUI();
     // 👇 新增方法：初始化自动补全器数据

@@ -202,24 +202,73 @@ void MapView::gameLoop() {
     qreal dx = 0.0;
     qreal dy = 0.0;
 
-    // 检查按键，算出移动意图
-    if (m_pressedKeys.contains(Qt::Key_W)) dy -= 1.0;
-    if (m_pressedKeys.contains(Qt::Key_S)) dy += 1.0;
-    if (m_pressedKeys.contains(Qt::Key_A)) dx -= 1.0;
-    if (m_pressedKeys.contains(Qt::Key_D)) dx += 1.0;
+    // ================== 🚗 自动驾驶模式 ==================
+    if (m_isAutoNavigating) {
+        // 如果用户在自动导航途中按下了 WASD，直接打断自动导航（交互体验拉满！）
+        if (!m_pressedKeys.isEmpty()) {
+            qDebug() << "[地图] 检测到玩家手动输入，自动导航已中断！";
+            stopAutoNavigation();
+            return;
+        }
 
-    // 1. 把当前的移动意图丢给角色，让他自己处理动画和朝向
-    m_character->updateAnimationState(dx, dy);
+        // 获取当前要去的目标航点
+        QPointF targetPos = m_waypoints[m_currentWaypointIndex];
+        QPointF currentPos = m_character->pos();
 
-    // 2. 处理实际的物理位移
+        // 计算当前位置与目标点之间的向量差
+        qreal diffX = targetPos.x() - currentPos.x();
+        qreal diffY = targetPos.y() - currentPos.y();
+        double distanceToTarget = std::hypot(diffX, diffY);
+
+        // 获取角色的当前速度（如果处在奔跑模式，就跑着去终点）
+        // 假设我们在 CharacterItem 里加了一个 getSpeed() 方法，如果没有你可以手写一个或者用固定值判断
+        // 为了安全，我们暂定单步走过的距离约等于 m_character 里的 speed，这里先用一个小阈值判断是否抵达
+        double arrivalThreshold = 6.0;
+
+        if (distanceToTarget <= arrivalThreshold) {
+            // 🎯 抵达当前航点！
+            m_character->setPos(targetPos); // 消除浮点数误差，强行对齐到点上
+            m_currentWaypointIndex++;       // 将目标切换为下一个航点
+
+            if (m_currentWaypointIndex >= m_waypoints.size()) {
+                // 所有航点都走完了，抵达最终目的地！
+                qDebug() << "[地图] 抵达目的地，自动导航结束。";
+                stopAutoNavigation();
+                return;
+            }
+        } else {
+            // 还没抵达，计算标准化方向向量，驱动角色前进
+            dx = diffX / distanceToTarget;
+            dy = diffY / distanceToTarget;
+        }
+    }
+    // ================== 🎮 手动驾驶模式 ==================
+    else {
+        if (m_pressedKeys.isEmpty()) {
+            // 如果没有人按键，且没在自动导航，停下脚步
+            m_character->updateAnimationState(0, 0);
+            return;
+        }
+
+        if (m_pressedKeys.contains(Qt::Key_W)) dy -= 1.0;
+        if (m_pressedKeys.contains(Qt::Key_S)) dy += 1.0;
+        if (m_pressedKeys.contains(Qt::Key_A)) dx -= 1.0;
+        if (m_pressedKeys.contains(Qt::Key_D)) dx += 1.0;
+
+        if (dx != 0.0 || dy != 0.0) {
+            double length = std::hypot(dx, dy);
+            dx /= length;
+            dy /= length;
+        }
+    }
+
+    // ================== 🚶 统一执行物理移动 ==================
     if (dx != 0.0 || dy != 0.0) {
-        double length = std::hypot(dx, dy);
-        dx /= length;
-        dy /= length;
-
+        // 让角色更新腿部动作和朝向
+        m_character->updateAnimationState(dx, dy);
+        // 让角色发生物理位移（会触发空气墙逻辑）
         m_character->moveByOffset(dx, dy);
-
-        // 镜头跟踪
+        // 镜头死死咬住角色
         centerOn(m_character);
     }
 }
@@ -246,6 +295,46 @@ void MapView::mousePressEvent(QMouseEvent* event) {
 
     // 6. 别忘了调用父类的默认处理逻辑，保证地图依然可以被鼠标拖拽
     QGraphicsView::mousePressEvent(event);
+}
+
+void MapView::startAutoNavigation(const std::vector<int>& pathNodeIds) {
+    if (pathNodeIds.empty()) return;
+
+    m_waypoints.clear();
+    const auto& graph = m_campusMap.getGraph();
+
+    // 将传入的节点 ID 序列转化为具体的物理坐标序列
+    for (int id : pathNodeIds) {
+        const auto* node = graph.getNode(id);
+        if (node) {
+            m_waypoints.push_back(QPointF(node->x, node->y));
+        }
+    }
+
+    if (m_waypoints.empty()) return;
+
+    m_currentWaypointIndex = 0;
+    m_isAutoNavigating = true;
+
+    // 🌟 细节优化：导航开始时，直接将角色“传送”到起点的准确坐标，防止他从老远跑过来
+    m_character->setPos(m_waypoints[0]);
+    centerOn(m_character); // 镜头切过去
+
+    // 如果起点就是终点（只传了一个点），直接结束
+    if (m_waypoints.size() <= 1) {
+        stopAutoNavigation();
+    } else {
+        // 将目标设为序列中的第二个点（因为第一个点是起点，现在已经站上去了）
+        m_currentWaypointIndex = 1;
+    }
+}
+
+void MapView::stopAutoNavigation() {
+    m_isAutoNavigating = false;
+    m_waypoints.clear();
+    // 强制角色停下动画，恢复站立姿态
+    m_character->updateAnimationState(0, 0);
+    emit autoNavigationFinished();
 }
 
 } // namespace graphics

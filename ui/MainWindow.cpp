@@ -25,6 +25,10 @@ MainWindow::MainWindow(const core::CampusMap& campusMap, QWidget *parent)
             m_navCtrl, &controller::NavigationController::setStartNode);
     connect(this, &MainWindow::endBuildingSelected,
             m_navCtrl, &controller::NavigationController::setEndNode);
+
+    // 🌟 核心绑定：监听控制器发出的 UI 重置请求
+    connect(m_navCtrl, &controller::NavigationController::navigationStateReset,
+            this, &MainWindow::onNavigationStateReset);
 }
 
 void MainWindow::setupUI() {
@@ -231,6 +235,18 @@ void MainWindow::onBtnSetEndClicked() {
         // 2. 发射信号通知 Controller 执行逻辑
         emit endBuildingSelected(m_currentSelectedBuildingId);
     }
+}
+
+// 👇 实现 UI 重置函数
+void MainWindow::onNavigationStateReset() {
+    // 将状态标签恢复为初始状态
+    m_lblCurrentStart->setText("<b>当前起点：</b> 未设置");
+    m_lblCurrentEnd->setText("<b>当前终点：</b> 未设置");
+
+    // 为了防止用户乱点，把当前选中的 ID 也清空，并禁用按钮
+    m_currentSelectedBuildingId = -1;
+    m_btnSetStart->setEnabled(false);
+    m_btnSetEnd->setEnabled(false);
 }
 
 } // namespace ui

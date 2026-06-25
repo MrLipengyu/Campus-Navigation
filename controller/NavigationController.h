@@ -11,10 +11,17 @@ class NavigationController : public QObject {
 public:
     NavigationController(const core::CampusMap& campusMap, graphics::MapView& mapView, QObject* parent = nullptr);
 
+    // 👇 1. 新增：通知主窗口去更新 UI 标签的信号
+signals:
+    void navigationStateReset();
+
 public slots:
     // 明确的显式指令槽函数
     void setStartNode(int buildingId);
     void setEndNode(int buildingId);
+
+    // 👇 2. 新增：处理导航结束的槽函数
+    void onNavigationFinished();
 
 private:
     // 检查状态并尝试寻路

@@ -6,7 +6,9 @@ namespace controller {
 
 NavigationController::NavigationController(const core::CampusMap& campusMap, graphics::MapView& mapView, QObject* parent)
     : QObject(parent), m_campusMap(campusMap), m_mapView(mapView) {
-    // 移除旧的绑定，现在路由完全由 MainWindow 显式发送的信号触发
+    // 🌟 核心绑定：当地图报告“跑完了”或“被打断了”，控制器立刻清理状态机！
+    connect(&m_mapView, &graphics::MapView::autoNavigationFinished,
+            this, &NavigationController::onNavigationFinished);
 }
 
 // 接收到设置起点的指令
@@ -62,6 +64,32 @@ void NavigationController::planAndDrawRoute() {
         qDebug() << "[Controller] 寻路成功！命令 UI 画线。";
         m_mapView.drawPath(path);
     }
+
+    if (path.empty()) {
+        qDebug() << "[Controller] 警告：没有找到可达的路径！";
+        m_mapView.clearPath();
+    } else {
+        qDebug() << "[Controller] 寻路成功！命令 UI 画线，并启动自动导航。";
+        m_mapView.drawPath(path);
+
+        // 👇 新增：画完线后，立即把路径丢给地图，启动自动驾驶！
+        m_mapView.startAutoNavigation(path);
+    }
+}
+
+// 👇 实现状态重置槽函数
+void NavigationController::onNavigationFinished() {
+    qDebug() << "[Controller] 收到导航结束指令，重置状态机。";
+
+    // 1. 清空大脑里的起终点记忆
+    m_startBuildingId = -1;
+    m_endBuildingId = -1;
+
+    // 2. 清除地图上残留的红线 (既然走到了，导航线就该消失了)
+    m_mapView.clearPath();
+
+    // 3. 发送信号，命令 MainWindow 清空右侧面板的起终点文字
+    emit navigationStateReset();
 }
 
 } // namespace controller

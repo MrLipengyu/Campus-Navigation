@@ -27,8 +27,15 @@ public:
     // 👇 新增：让外界控制角色速度
     void setCharacterSpeed(qreal speed);
 
+    // 👇 新增：启动和停止自动导航的接口
+    void startAutoNavigation(const std::vector<int>& pathNodeIds);
+    void stopAutoNavigation();
+
 signals:
     void buildingClicked(int buildingId);
+
+    // 👇 新增：当角色走到终点时，发射此信号通知外界
+    void autoNavigationFinished();
 
 protected:
     void wheelEvent(QWheelEvent* event) override;
@@ -60,6 +67,11 @@ private:
     // 👇 新增：状态机数据
     QSet<int> m_pressedKeys; // 记录当前一直被按住的按键 (如 Qt::Key_W)
     QTimer* m_gameTimer;     // 驱动移动的时钟引擎
+
+    // ================= 自动导航状态机数据 =================
+    bool m_isAutoNavigating = false;           // 当前是否处于自动驾驶模式
+    std::vector<QPointF> m_waypoints;          // 航点坐标列表
+    size_t m_currentWaypointIndex = 0;         // 当前正在前往第几个航点
 };
 
 } // namespace graphics
