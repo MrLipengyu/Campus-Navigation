@@ -11,6 +11,10 @@
 
 #include <QGroupBox>    // 👇 新增
 #include <QRadioButton> // 👇 新增
+#include <QDialog>
+#include <QTextEdit>
+#include <QMessageBox>
+
 #include "../core/map/CampusMap.h"
 #include "../graphics/MapView.h"
 #include "../controller/NavigationController.h"
@@ -21,7 +25,7 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit MainWindow(const core::CampusMap& campusMap, QWidget *parent = nullptr);
+    explicit MainWindow(core::CampusMap& campusMap, QWidget *parent = nullptr);
     ~MainWindow() = default;
 
 // 👇 1. 定义向 Controller 发送指令的信号
@@ -42,13 +46,16 @@ private slots:
     // 👇 新增：响应控制器重置状态的槽函数
     void onNavigationStateReset();
 
+    // 👇 新增：响应编辑按钮的槽函数
+    void onBtnEditInfoClicked();
+
 private:
     void setupUI();
     // 👇 新增方法：初始化自动补全器数据
     void setupSearchCompleter();
 
 private:
-    const core::CampusMap& m_campusMap;
+    core::CampusMap& m_campusMap;
 
     graphics::MapView* m_mapView;
     controller::NavigationController* m_navCtrl;
@@ -74,6 +81,8 @@ private:
     QGroupBox* m_envGroup;        // “系统与环境”分组框
     QRadioButton* m_radioWalk;    // 步行单选钮
     QRadioButton* m_radioRun;     // 奔跑单选钮
+
+    QPushButton* m_btnEditInfo; // 👇 新增：管理员编辑按钮
 };
 
 } // namespace ui

@@ -139,8 +139,8 @@ void MapView::drawPath(const std::vector<int>& pathNodeIds) {
     const auto& graph = m_campusMap.getGraph();
 
     // 设置高亮画笔：粗壮、红色、圆滑线帽和拐角
-    QPen pathPen(QColor(255, 50, 50, 220));
-    pathPen.setWidth(6);
+    QPen pathPen(QColor(57, 255, 20, 220));
+    pathPen.setWidth(4);
     pathPen.setCapStyle(Qt::RoundCap);
     pathPen.setJoinStyle(Qt::RoundJoin);
 

@@ -5,7 +5,7 @@
 
 namespace ui {
 
-MainWindow::MainWindow(const core::CampusMap& campusMap, QWidget *parent)
+MainWindow::MainWindow(core::CampusMap& campusMap, QWidget *parent)
     : QMainWindow(parent), m_campusMap(campusMap) {
 
     setWindowTitle("天津理工大学 - 校园智能导航系统 v1.0");
@@ -95,6 +95,15 @@ void MainWindow::setupUI() {
     m_buildingInfoText->setHtml("<b>请在左侧地图中点击建筑，或使用上方搜索框。</b>");
     m_buildingInfoText->setStyleSheet("background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; padding: 10px;");
     rightPanelLayout->addWidget(m_buildingInfoText);
+
+    //添加编辑功能
+    m_btnEditInfo = new QPushButton("✏️ 编辑建筑信息 (管理员)", this);
+    m_btnEditInfo->setStyleSheet("color: #27ae60; font-weight: bold; padding: 5px;");
+    m_btnEditInfo->setEnabled(false); // 默认禁用，选中建筑后开启
+    rightPanelLayout->addWidget(m_btnEditInfo);
+
+    // 绑定点击事件
+    connect(m_btnEditInfo, &QPushButton::clicked, this, &MainWindow::onBtnEditInfoClicked);
 
     // 4. 🚩 交互按钮与状态显示模块
     QVBoxLayout* controlLayout = new QVBoxLayout(); // 使用垂直布局包住按钮和状态
@@ -213,6 +222,8 @@ void MainWindow::updateInfoPanel(int buildingId) {
     // 激活下方的起终点按钮
     m_btnSetStart->setEnabled(true);
     m_btnSetEnd->setEnabled(true);
+
+    m_btnEditInfo->setEnabled(true); // 👇 激活编辑按钮
 }
 
 void MainWindow::onBtnSetStartClicked() {
@@ -247,6 +258,62 @@ void MainWindow::onNavigationStateReset() {
     m_currentSelectedBuildingId = -1;
     m_btnSetStart->setEnabled(false);
     m_btnSetEnd->setEnabled(false);
+
+    m_btnEditInfo->setEnabled(false);//👇 激活编辑按钮
+}
+
+void MainWindow::onBtnEditInfoClicked() {
+    if (m_currentSelectedBuildingId == -1) return;
+
+    // 1. 获取当前建筑
+    const core::Building* b = m_campusMap.getBuilding(m_currentSelectedBuildingId);
+    if (!b) return;
+
+    // 2. 创建一个模态对话框 (QDialog)
+    QDialog dialog(this);
+    dialog.setWindowTitle("管理员编辑模式 - " + QString::fromStdString(b->name));
+    dialog.resize(500, 400);
+
+    QVBoxLayout* layout = new QVBoxLayout(&dialog);
+
+    // 提示标签
+    QLabel* hintLabel = new QLabel("请在下方修改建筑详细信息（支持多行文本）：", &dialog);
+    layout->addWidget(hintLabel);
+
+    // 文本编辑框
+    QTextEdit* textEdit = new QTextEdit(&dialog);
+    textEdit->setFont(QFont("Microsoft YaHei", 10));
+    // 将原始的纯文本加载进输入框
+    textEdit->setPlainText(QString::fromStdString(b->info));
+    layout->addWidget(textEdit);
+
+    // 底部按钮
+    QHBoxLayout* btnLayout = new QHBoxLayout();
+    QPushButton* btnSave = new QPushButton("💾 保存修改", &dialog);
+    QPushButton* btnCancel = new QPushButton("取消", &dialog);
+    btnLayout->addStretch();
+    btnLayout->addWidget(btnSave);
+    btnLayout->addWidget(btnCancel);
+    layout->addLayout(btnLayout);
+
+    // 3. 绑定对话框按钮事件
+    connect(btnSave, &QPushButton::clicked, &dialog, &QDialog::accept);
+    connect(btnCancel, &QPushButton::clicked, &dialog, &QDialog::reject);
+
+    // 4. 显示对话框并等待用户操作
+    if (dialog.exec() == QDialog::Accepted) {
+        // 用户点击了保存！
+        std::string newInfo = textEdit->toPlainText().toStdString();
+
+        // 调用 CampusMap 的修改接口，将数据写入 SQLite
+        if (m_campusMap.updateBuildingInfo(m_currentSelectedBuildingId, newInfo)) {
+            QMessageBox::information(this, "成功", "建筑信息已成功更新至数据库！");
+            // 刷新右侧信息面板，展示最新数据
+            updateInfoPanel(m_currentSelectedBuildingId);
+        } else {
+            QMessageBox::critical(this, "错误", "数据库更新失败！");
+        }
+    }
 }
 
 } // namespace ui

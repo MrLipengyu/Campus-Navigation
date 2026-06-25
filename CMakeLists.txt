@@ -46,6 +46,8 @@ set(PROJECT_SOURCES
     ui/MainWindow.h
     ui/MainWindow.cpp
 
+    database/DatabaseManager.h
+    database/DatabaseManager.cpp
 )
 
 # 添加可执行文件
