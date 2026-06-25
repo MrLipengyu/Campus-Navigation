@@ -198,35 +198,28 @@ void MapView::keyReleaseEvent(QKeyEvent *event) {
     }
 }
 
-// 👇 3. 🌟 核心引擎：每 16ms 自动调用一次！
 void MapView::gameLoop() {
-    // 如果没有按键被按下，直接返回，什么都不做
-    if (m_pressedKeys.isEmpty()) return;
-
     qreal dx = 0.0;
     qreal dy = 0.0;
 
-    // 检查集合里同时包含哪些按键，实现八向移动
+    // 检查按键，算出移动意图
     if (m_pressedKeys.contains(Qt::Key_W)) dy -= 1.0;
     if (m_pressedKeys.contains(Qt::Key_S)) dy += 1.0;
     if (m_pressedKeys.contains(Qt::Key_A)) dx -= 1.0;
     if (m_pressedKeys.contains(Qt::Key_D)) dx += 1.0;
 
-    // 如果 x 和 y 都没有变化，说明可能同时按下了 W 和 S 抵消了
-    if (dx != 0.0 || dy != 0.0) {
+    // 1. 把当前的移动意图丢给角色，让他自己处理动画和朝向
+    m_character->updateAnimationState(dx, dy);
 
-        // 【高级技巧：向量归一化】
-        // 如果不做处理，斜着走（比如右下 dx=1, dy=1）的速度会是直走的 1.414 倍。
-        // 用勾股定理计算出向量长度，然后将 dx 和 dy 除以这个长度，保证八个方向速度绝对一致！
+    // 2. 处理实际的物理位移
+    if (dx != 0.0 || dy != 0.0) {
         double length = std::hypot(dx, dy);
         dx /= length;
         dy /= length;
 
-        // 命令角色移动（因为是 60帧/秒，所以如果你觉得现在走得太快/太慢，
-        // 请去 CharacterItem.h 里把 m_speed 调小，比如调成 3.0 或 5.0）
         m_character->moveByOffset(dx, dy);
 
-        // 🌟【关键修复】：强行让 MapView 的镜头中心对准角色的当前位置！
+        // 镜头跟踪
         centerOn(m_character);
     }
 }

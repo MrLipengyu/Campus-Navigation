@@ -133,13 +133,13 @@ void MainWindow::setupUI() {
     // 🌟 核心绑定：当单选按钮状态改变时，通知 MapView 改变角色速度
     connect(m_radioWalk, &QRadioButton::toggled, this, [this](bool checked){
         if (checked) {
-            m_mapView->setCharacterSpeed(2.0); // 步行速度，可根据你的帧率手感微调
+            m_mapView->setCharacterSpeed(1.5); // 步行速度，可根据你的帧率手感微调
         }
     });
 
     connect(m_radioRun, &QRadioButton::toggled, this, [this](bool checked){
         if (checked) {
-            m_mapView->setCharacterSpeed(4.0); // 奔跑速度设定为步行的两倍
+            m_mapView->setCharacterSpeed(3.0); // 奔跑速度设定为步行的两倍
         }
     });
 }
