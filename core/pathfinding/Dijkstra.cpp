@@ -67,8 +67,18 @@ std::vector<int> Pathfinder::findShortestPath(int startId, int endId) {
         return path; // 终点不可达
     }
 
-    for (int at = endId; at != startId; at = previous[at]) {
+    // 使用 find() 而非 operator[] 进行安全回溯。
+    // operator[] 在键不存在时会自动插入默认值 0，可能导致死循环；
+    // find() 在找不到前驱时返回 end()，可以安全中止并返回空路径。
+    for (int at = endId; at != startId; ) {
         path.push_back(at);
+        auto it = previous.find(at);
+        if (it == previous.end()) {
+            // 回溯链断裂（起点与终点实际不连通，防御性处理）
+            path.clear();
+            return path;
+        }
+        at = it->second;
     }
     path.push_back(startId);
 

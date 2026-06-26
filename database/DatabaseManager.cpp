@@ -74,7 +74,13 @@ bool DatabaseManager::insertBuilding(const core::Building& b) {
 
 std::vector<core::Building> DatabaseManager::getAllBuildings() {
     std::vector<core::Building> buildings;
-    QSqlQuery query("SELECT id, name, info, ui_x, ui_y, hitbox_radius, entrance_node_id FROM buildings");
+    
+    if (!m_db.isOpen()) {
+        return buildings; // 防止数据库未开启时执行查询
+    }
+
+    QSqlQuery query(m_db);
+    query.exec("SELECT id, name, info, ui_x, ui_y, hitbox_radius, entrance_node_id FROM buildings");
 
     while (query.next()) {
         core::Building b;

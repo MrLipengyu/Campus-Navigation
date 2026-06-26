@@ -293,6 +293,7 @@ void MainWindow::updateInfoPanel(int buildingId) {
 void MainWindow::onBtnSetStartClicked() {
     if (m_currentSelectedBuildingId != -1) {
         const core::Building* b = m_campusMap.getBuilding(m_currentSelectedBuildingId);
+        if (!b) return; // 防止空指针解引用
         m_lblCurrentStart->setText("<b>当前起点：</b> " + QString::fromStdString(b->name));
         emit startBuildingSelected(m_currentSelectedBuildingId);
     }
@@ -301,6 +302,7 @@ void MainWindow::onBtnSetStartClicked() {
 void MainWindow::onBtnAddDestClicked() {
     if (m_currentSelectedBuildingId != -1) {
         const core::Building* b = m_campusMap.getBuilding(m_currentSelectedBuildingId);
+        if (!b) return; // 防止空指针解引用
 
         // 动态追加显示途经点名称
         QString currentText = m_lblDestinations->text();
