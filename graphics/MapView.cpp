@@ -351,10 +351,19 @@ void MapView::startAutoNavigation(const std::vector<int>& pathNodeIds) {
 }
 
 void MapView::stopAutoNavigation() {
+    // 🌟 核心防御：如果当前本来就没有在自动导航，直接退回！
+    // 彻底斩断 Controller 和 MapView 之间的无限递归死循环！
+    if (!m_isAutoNavigating) return;
+
     m_isAutoNavigating = false;
     m_waypoints.clear();
+
     // 强制角色停下动画，恢复站立姿态
-    m_character->updateAnimationState(0, 0);
+    if (m_character) {
+        m_character->updateAnimationState(0, 0);
+    }
+
+    // 发送结束信号
     emit autoNavigationFinished();
 }
 

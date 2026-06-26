@@ -32,7 +32,7 @@ public:
 // 👇 1. 定义向 Controller 发送指令的信号
 signals:
     void startBuildingSelected(int buildingId); // 发送设置起点指令
-    void endBuildingSelected(int buildingId);   // 发送设置终点指令
+    void destBuildingAdded(int buildingId); // 👇 发射添加途经点信号
 
 private slots:
     void updateInfoPanel(int buildingId);
@@ -42,10 +42,14 @@ private slots:
 
     // 👇 2. 新增：处理内部按钮点击的槽函数
     void onBtnSetStartClicked();
-    void onBtnSetEndClicked();
+    void onBtnAddDestClicked();      // 👇 以前的 setEnd 变成了 addDest
+    void onBtnStartNavClicked();     // 👇 开始多点导航
+    void onBtnClearNavClicked();     // 👇 清空
 
     // 👇 新增：响应控制器重置状态的槽函数
     void onNavigationStateReset();
+
+    void onRouteOrderUpdated(const QString& text); // 👇 接收并显示新路线
 
     // 👇 新增：响应编辑按钮的槽函数
     void onBtnEditInfoClicked();
@@ -69,13 +73,15 @@ private:
     QTextBrowser* m_buildingInfoText;
 
     QPushButton* m_btnSetStart;       // 🚩 设为起点按钮
-    QPushButton* m_btnSetEnd;         // 🏁 设为终点按钮
+    QPushButton* m_btnAddDest;       // 📍 添加途经点
+    QPushButton* m_btnStartNav;      // 🚀 开始导航
+    QPushButton* m_btnClearNav;      // 🗑️ 清空
 
     QPushButton* m_btnEditInfo; // 👇 新增：管理员编辑按钮
 
     // 👇 3. 新增：用于在界面上显示当前选中的起终点名称
     QLabel* m_lblCurrentStart;
-    QLabel* m_lblCurrentEnd;
+    QLabel* m_lblDestinations;       // 👇 存放途经点的列表
 
     // 记录当前信息面板正在展示的建筑 ID
     int m_currentSelectedBuildingId = -1;

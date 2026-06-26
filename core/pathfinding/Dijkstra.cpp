@@ -78,4 +78,75 @@ std::vector<int> Pathfinder::findShortestPath(int startId, int endId) {
     return path;
 }
 
+// 辅助函数：计算路线的总距离
+double Pathfinder::calculatePathDistance(const std::vector<int>& path) {
+    double dist = 0.0;
+    for (size_t i = 0; i < path.size() - 1; ++i) {
+        const Node* node = m_graph.getNode(path[i]);
+        if (node) {
+            for (const auto& edge : node->edges) {
+                if (edge.toNodeId == path[i+1]) {
+                    dist += edge.distance;
+                    break;
+                }
+            }
+        }
+    }
+    return dist;
+}
+
+// 🌟 核心扩展：TSP 近似算法 (贪心策略)
+std::vector<int> Pathfinder::findTSPPath(int startId, std::vector<int> destIds, std::vector<int>& outVisitOrder) {
+    std::vector<int> fullPath;
+    outVisitOrder.clear();
+
+    if (destIds.empty()) return fullPath;
+
+    int currentStart = startId;
+    outVisitOrder.push_back(currentStart); // 记录起点
+    fullPath.push_back(currentStart);      // 初始化总路径
+
+    // 当还有目的地没去过时，持续循环
+    while (!destIds.empty()) {
+        int bestDestIdx = -1;
+        double minDistance = std::numeric_limits<double>::infinity();
+        std::vector<int> bestSubPath;
+
+        // 遍历所有尚未访问的目的地，找到距离当前位置最近的
+        for (size_t i = 0; i < destIds.size(); ++i) {
+            // 调用我们写好的 Dijkstra 算法计算当前点到该候选点的路径
+            std::vector<int> subPath = findShortestPath(currentStart, destIds[i]);
+
+            if (subPath.empty()) continue; // 如果根本走不通，跳过
+
+            double dist = calculatePathDistance(subPath);
+            if (dist < minDistance) {
+                minDistance = dist;
+                bestDestIdx = i;
+                bestSubPath = subPath;
+            }
+        }
+
+        // 如果所有剩余点都不可达，提前结束
+        if (bestDestIdx == -1) {
+            break;
+        }
+
+        int nextDest = destIds[bestDestIdx];
+        outVisitOrder.push_back(nextDest); // 记录访问顺序
+
+        // 拼接路径：跳过 subPath 的第一个点（因为它等于 currentStart，防止路径重复）
+        for (size_t i = 1; i < bestSubPath.size(); ++i) {
+            fullPath.push_back(bestSubPath[i]);
+        }
+
+        // 走到新的点，更新当前位置
+        currentStart = nextDest;
+        // 从未访问列表中移除这个点
+        destIds.erase(destIds.begin() + bestDestIdx);
+    }
+
+    return fullPath;
+}
+
 } // namespace core

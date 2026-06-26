@@ -6,90 +6,84 @@ namespace controller {
 
 NavigationController::NavigationController(const core::CampusMap& campusMap, graphics::MapView& mapView, QObject* parent)
     : QObject(parent), m_campusMap(campusMap), m_mapView(mapView) {
-    // 🌟 核心绑定：当地图报告“跑完了”或“被打断了”，控制器立刻清理状态机！
+
     connect(&m_mapView, &graphics::MapView::autoNavigationFinished,
             this, &NavigationController::onNavigationFinished);
 }
 
-// 接收到设置起点的指令
 void NavigationController::setStartNode(int buildingId) {
     m_startBuildingId = buildingId;
     qDebug() << "[Controller] 起点已更新为 ID:" << buildingId;
-    tryPlanRoute(); // 每次状态改变，尝试寻路
 }
 
-// 接收到设置终点的指令
-void NavigationController::setEndNode(int buildingId) {
-    m_endBuildingId = buildingId;
-    qDebug() << "[Controller] 终点已更新为 ID:" << buildingId;
-    tryPlanRoute(); // 每次状态改变，尝试寻路
-}
-
-// 尝试规划路径（状态检查）
-void NavigationController::tryPlanRoute() {
-    // 如果起点和终点都已经设置
-    if (m_startBuildingId != -1 && m_endBuildingId != -1) {
-
-        // 防止起终点相同
-        if (m_startBuildingId == m_endBuildingId) {
-            qDebug() << "[Controller] 起点与终点相同，已清空路径。";
-            m_mapView.clearPath();
-            return;
-        }
-
-        // 状态合法，开始实际寻路
-        planAndDrawRoute();
-    } else {
-        // 状态不全，清空已有路径
-        m_mapView.clearPath();
+void NavigationController::addDestNode(int buildingId) {
+    // 检查重复：起点不能是目的地，也不能重复添加相同的目的地
+    if (m_startBuildingId == buildingId) return;
+    for (int id : m_destBuildingIds) {
+        if (id == buildingId) return;
     }
+
+    m_destBuildingIds.push_back(buildingId);
+    qDebug() << "[Controller] 成功添加途经点，当前总计:" << m_destBuildingIds.size();
 }
 
-// 实际执行 Dijkstra 的核心函数
-void NavigationController::planAndDrawRoute() {
+void NavigationController::clearRoute() {
+    m_startBuildingId = -1;
+    m_destBuildingIds.clear();
+    m_mapView.clearPath();
+    m_mapView.stopAutoNavigation();
+    emit navigationStateReset();
+}
+
+void NavigationController::startMultiNavigation() {
+    if (m_startBuildingId == -1 || m_destBuildingIds.empty()) {
+        qDebug() << "[Controller] 警告：条件不足，无法发车！";
+        return;
+    }
+
     const core::Building* startB = m_campusMap.getBuilding(m_startBuildingId);
-    const core::Building* endB = m_campusMap.getBuilding(m_endBuildingId);
+    if (!startB) return;
 
-    if (!startB || !endB) return;
-
-    qDebug() << "[Controller] 调用 Dijkstra 开始寻路...";
+    // 将建筑 ID 转化为路网节点 ID
+    std::vector<int> destNodeIds;
+    for (int bId : m_destBuildingIds) {
+        const core::Building* b = m_campusMap.getBuilding(bId);
+        if (b) destNodeIds.push_back(b->entrance_node_id);
+    }
 
     core::Pathfinder pathfinder(m_campusMap.getGraph());
-    std::vector<int> path = pathfinder.findShortestPath(startB->entrance_node_id, endB->entrance_node_id);
+    std::vector<int> visitOrderNodes; // 算法吐出的真实访问顺序
+
+    // 🌟 调用多目标 TSP 算法
+    std::vector<int> path = pathfinder.findTSPPath(startB->entrance_node_id, destNodeIds, visitOrderNodes);
 
     if (path.empty()) {
-        qDebug() << "[Controller] 警告：没有找到可达的路径！";
-        m_mapView.clearPath(); // 如果找不到路，确保线被清空
-    } else {
-        qDebug() << "[Controller] 寻路成功！命令 UI 画线。";
-        m_mapView.drawPath(path);
-    }
-
-    if (path.empty()) {
-        qDebug() << "[Controller] 警告：没有找到可达的路径！";
+        qDebug() << "[Controller] 错误：无法找到连通路径！";
         m_mapView.clearPath();
     } else {
-        qDebug() << "[Controller] 寻路成功！命令 UI 画线，并启动自动导航。";
-        m_mapView.drawPath(path);
+        // 构建用于 UI 显示的访问顺序字符串
+        QString orderText = "<b>最优访问顺序:</b><br>";
+        for (size_t i = 0; i < visitOrderNodes.size(); ++i) {
+            // 通过 entrance_node_id 反查建筑名称
+            for (const auto& [id, b] : m_campusMap.getAllBuildings()) {
+                if (b.entrance_node_id == visitOrderNodes[i]) {
+                    orderText += QString::fromStdString(b.name);
+                    if (i != visitOrderNodes.size() - 1) orderText += " <span style='color:red;'>➡</span> ";
+                    break;
+                }
+            }
+        }
 
-        // 👇 新增：画完线后，立即把路径丢给地图，启动自动驾驶！
+        emit routeOrderUpdated(orderText); // 通知界面更新文字
+
+        // 让地图画线并开始自动导航
+        m_mapView.drawPath(path);
         m_mapView.startAutoNavigation(path);
     }
 }
 
-// 👇 实现状态重置槽函数
 void NavigationController::onNavigationFinished() {
-    qDebug() << "[Controller] 收到导航结束指令，重置状态机。";
-
-    // 1. 清空大脑里的起终点记忆
-    m_startBuildingId = -1;
-    m_endBuildingId = -1;
-
-    // 2. 清除地图上残留的红线 (既然走到了，导航线就该消失了)
-    m_mapView.clearPath();
-
-    // 3. 发送信号，命令 MainWindow 清空右侧面板的起终点文字
-    emit navigationStateReset();
+    clearRoute(); // 导航结束后自动清理战场
 }
 
 } // namespace controller

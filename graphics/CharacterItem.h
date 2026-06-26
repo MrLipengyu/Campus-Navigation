@@ -37,7 +37,7 @@ public:
     void updateAnimationState(qreal dx, qreal dy);
 
 private:
-    qreal m_speed = 1.0;  // 每次按下 WASD 的移动步长
+    qreal m_speed = 2.0;  // 每次按下 WASD 的移动步长
 
     // ================= 动画相关属性 =================
     QPixmap m_spriteSheet;      // 精灵大图

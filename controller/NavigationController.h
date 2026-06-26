@@ -15,14 +15,18 @@ public:
 signals:
     void navigationStateReset();
 
+    // 👇 新增：当计算出新路径时，告诉 UI 实际的访问顺序
+    void routeOrderUpdated(const QString& orderText);
+
 public slots:
     // 明确的显式指令槽函数
     void setStartNode(int buildingId);
-    void setEndNode(int buildingId);
 
-    // 👇 2. 新增：处理导航结束的槽函数
+    // 👇 修改槽函数：支持添加多个目的地和控制导航
+    void addDestNode(int buildingId);
+    void clearRoute();
+    void startMultiNavigation();
     void onNavigationFinished();
-
 private:
     // 检查状态并尝试寻路
     void tryPlanRoute();
@@ -33,7 +37,7 @@ private:
     graphics::MapView& m_mapView;
 
     int m_startBuildingId = -1;
-    int m_endBuildingId = -1;
+    std::vector<int> m_destBuildingIds; // 👇 终点变成了一个数组
 };
 
 } // namespace controller

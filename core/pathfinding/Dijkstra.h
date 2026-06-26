@@ -6,14 +6,20 @@ namespace core {
 
 class Pathfinder {
 public:
-    // 构造函数传入图的常引用，保证寻路算法绝对不会修改图数据
     explicit Pathfinder(const Graph& graph);
 
-    // 核心算法：返回从起点到终点的最短路径节点 ID 序列
-    // 如果返回空的 vector，说明没有通路
+    // 原有的单点最短路径
     std::vector<int> findShortestPath(int startId, int endId);
 
+    // 👇 新增：多终点近似 TSP 算法 (贪心最近邻)
+    // destIds: 多个目标路网节点的 ID
+    // outVisitOrder: 传出参数，用于返回算法实际计算出的访问顺序
+    std::vector<int> findTSPPath(int startId, std::vector<int> destIds, std::vector<int>& outVisitOrder);
+
 private:
+    // 👇 新增辅助方法：计算某一段路径的真实物理长度
+    double calculatePathDistance(const std::vector<int>& path);
+
     const Graph& m_graph;
 };
 
