@@ -35,6 +35,9 @@ set(PROJECT_SOURCES
     graphics/CharacterItem.h
     graphics/CharacterItem.cpp
 
+    graphics/NpcItem.h
+    graphics/NpcItem.cpp
+
     core/map/Building.h
 
     core/map/CampusMap.h
@@ -45,6 +48,9 @@ set(PROJECT_SOURCES
 
     ui/MainWindow.h
     ui/MainWindow.cpp
+
+    ui/DialogWidget.h
+    ui/DialogWidget.cpp
 
     database/DatabaseManager.h
     database/DatabaseManager.cpp

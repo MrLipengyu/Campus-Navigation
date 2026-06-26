@@ -18,7 +18,9 @@
 
 #include "../core/map/CampusMap.h"
 #include "../graphics/MapView.h"
+#include "../graphics/NpcItem.h"
 #include "../controller/NavigationController.h"
+#include "DialogWidget.h"
 
 namespace ui {
 
@@ -54,10 +56,18 @@ private slots:
     // 👇 新增：响应编辑按钮的槽函数
     void onBtnEditInfoClicked();
 
+    // 👇 新增：响应 NPC 触发事件
+    void onNpcTriggered(graphics::NpcItem* npc);
+
+    // 👇 新增：响应对话结束事件
+    void onDialogFinished();
+
 private:
     void setupUI();
     // 👇 新增方法：初始化自动补全器数据
     void setupSearchCompleter();
+    // 👇 新增：定位悬浮对话框到 mapView 底部居中
+    void positionDialogWidget();
 
 private:
     core::CampusMap& m_campusMap;
@@ -93,6 +103,9 @@ private:
 
     // 👇 新增：昼夜切换开关
     QCheckBox* m_checkNightMode;
+
+    // 👇 新增：悬浮对话框
+    DialogWidget* m_dialogWidget = nullptr;
 };
 
 } // namespace ui

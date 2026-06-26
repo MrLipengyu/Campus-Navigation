@@ -6,6 +6,7 @@
 #include <QDialog>
 #include <QTextEdit>
 #include <QMessageBox>
+#include <QResizeEvent>
 
 namespace ui {
 
@@ -42,6 +43,30 @@ MainWindow::MainWindow(core::CampusMap& campusMap, QWidget *parent)
             this, &MainWindow::onNavigationStateReset);
     connect(m_navCtrl, &controller::NavigationController::routeOrderUpdated,
             this, &MainWindow::onRouteOrderUpdated);
+
+    // ================= NPC 系统初始化 =================
+
+    // 1. 创建悬浮对话框（父对象为 this，自动居中对齐到 mapView 底部）
+    m_dialogWidget = new DialogWidget(this);
+
+    // 2. 创建 mad_professor NPC
+    //    服务于 「朝阳广场」地标（请根据地图 JSON 数据确认坐标）
+    graphics::NpcData teacher;
+    teacher.name          = "teacher";
+    teacher.displayName   = QString::fromUtf8("老师");
+    teacher.position      = QPointF(878, 470);  // 朝阳广场真实坐标 (来自 map_data_fuben.json)
+    teacher.triggerRadius = 18.0;               // 80像素触发范围
+
+    auto* madProf = new graphics::NpcItem(teacher);
+    m_mapView->addNpc(madProf);
+
+    // 3. 串联信号槽：NPC 触发 → MainWindow 处理 → 弹出对话框
+    connect(m_mapView, &graphics::MapView::npcTriggered,
+            this, &MainWindow::onNpcTriggered);
+
+    // 4. 对话结束 → 解冻玩家移动
+    connect(m_dialogWidget, &DialogWidget::dialogFinished,
+            this, &MainWindow::onDialogFinished);
 }
 
 void MainWindow::setupUI() {
@@ -362,6 +387,42 @@ void MainWindow::onBtnEditInfoClicked() {
             QMessageBox::critical(this, "错误", "数据库更新失败！");
         }
     }
+}
+
+
+// ======================== NPC 对话系统槽函数 ========================
+
+void MainWindow::onNpcTriggered(graphics::NpcItem* npc) {
+    if (!m_dialogWidget || !npc) return;
+
+    // 冻结玩家移动
+    m_mapView->setTalkingMode(true);
+
+    QVector<QString> lines;
+    lines << QString::fromUtf8("「站住！……开玩笑的，我只是太久没人搭理了。」");
+    lines << QString::fromUtf8("「这学校是我的领地——当然，保安大叔不这么认为。」");
+    lines << QString::fromUtf8("「迷路了吗？用导航，别靠直觉——我见过太多靠直觉绕了半小时的学生。」");
+    lines << QString::fromUtf8("「好了，去吧，我继续看风景。」");
+
+    // 定位并弹出对话框
+    positionDialogWidget();
+    m_dialogWidget->startDialog(npc->data().displayName, lines);
+}
+
+void MainWindow::onDialogFinished() {
+    m_mapView->setTalkingMode(false);
+}
+
+void MainWindow::positionDialogWidget() {
+    if (!m_dialogWidget || !m_mapView) return;
+    QPoint mapViewPos = m_mapView->mapTo(this, QPoint(0, 0));
+    int mapW = m_mapView->width();
+    int mapH = m_mapView->height();
+    int dlgW = m_dialogWidget->width();
+    int dlgH = m_dialogWidget->height();
+    int x = mapViewPos.x() + (mapW - dlgW) / 2;
+    int y = mapViewPos.y() + mapH - dlgH - 20;
+    m_dialogWidget->move(x, y);
 }
 
 } // namespace ui

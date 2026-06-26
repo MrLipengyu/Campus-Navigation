@@ -220,6 +220,20 @@ void MapView::keyReleaseEvent(QKeyEvent *event) {
 }
 
 void MapView::gameLoop() {
+    // ================== NPC 冷却 Tick ==================
+    // 每帧更新所有 NPC 的冷却计时器
+    for (auto* npc : m_npcList) {
+        npc->tickCooldown();
+    }
+
+    // ================== 对话冻结检查 ==================
+    if (m_isTalking) {
+        // 对话进行中：停止所有移动逻辑，确保 WASD 不積累
+        m_pressedKeys.clear();
+        m_character->updateAnimationState(0, 0);
+        return;
+    }
+
     qreal dx = 0.0;
     qreal dy = 0.0;
 
@@ -291,6 +305,23 @@ void MapView::gameLoop() {
         m_character->moveByOffset(dx, dy);
         // 镜头死死咬住角色
         centerOn(m_character);
+    }
+
+    // ================== NPC 距离检测 ==================
+    if (!m_npcList.isEmpty() && m_character) {
+        QPointF playerPos = m_character->pos();
+        for (auto* npc : m_npcList) {
+            if (npc->isInCooldown() || npc->hasTriggered()) continue;
+
+            QPointF npcPos = npc->pos();
+            qreal dist = std::hypot(playerPos.x() - npcPos.x(),
+                                    playerPos.y() - npcPos.y());
+
+            if (dist <= npc->data().triggerRadius) {
+                npc->startCooldown(300); // 5 秒冷却 (300帧@60FPS)
+                emit npcTriggered(npc);
+            }
+        }
     }
 }
 
@@ -365,6 +396,32 @@ void MapView::stopAutoNavigation() {
 
     // 发送结束信号
     emit autoNavigationFinished();
+}
+
+// ================== NPC 系统新增方法 ==================
+
+void MapView::addNpc(NpcItem* npc) {
+    if (!npc) return;
+    m_npcList.append(npc);
+    m_scene->addItem(npc);
+
+    // 连接 NPC 点击信号（点击触发也视为靠近触发）
+    connect(npc, &NpcItem::clicked, this, [this](NpcItem* clickedNpc) {
+        if (!clickedNpc->isInCooldown() && !clickedNpc->hasTriggered()) {
+            clickedNpc->startCooldown(300);
+            emit npcTriggered(clickedNpc);
+        }
+    });
+
+    qDebug() << "[MapView] NPC 已添加到地图：" << npc->data().name;
+}
+
+void MapView::setTalkingMode(bool isTalking) {
+    m_isTalking = isTalking;
+    if (!isTalking) {
+        // 解冻时清空按键待机队列，防止角色突然冲出去
+        m_pressedKeys.clear();
+    }
 }
 
 } // namespace graphics

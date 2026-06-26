@@ -3,8 +3,10 @@
 #include <QGraphicsScene>
 #include <QTimer> // 👇 新增：定时器
 #include <QSet>   // 👇 新增：集合容器，用来装按下的按键
+#include <QVector>
 
 #include "CharacterItem.h" // 👇 引入角色头文件
+#include "NpcItem.h"       // 👇 引入 NPC 头文件
 
 #include "../core/map/CampusMap.h" // 引入 CampusMap
 
@@ -34,11 +36,20 @@ public:
     // 👇 新增：向外提供切换昼夜的接口
     void setNightMode(bool isNight);
 
+    // 👇 新增：添加 NPC 到地图
+    void addNpc(NpcItem* npc);
+
+    // 👇 新增：对话状态切换（true=冻结WASD）
+    void setTalkingMode(bool isTalking);
+
 signals:
     void buildingClicked(int buildingId);
 
     // 👇 新增：当角色走到终点时，发射此信号通知外界
     void autoNavigationFinished();
+
+    // 👇 新增：当玩家靠近 NPC 时，发射此信号
+    void npcTriggered(NpcItem* npc);
 
 protected:
     void wheelEvent(QWheelEvent* event) override;
@@ -78,6 +89,10 @@ private:
     bool m_isAutoNavigating = false;           // 当前是否处于自动驾驶模式
     std::vector<QPointF> m_waypoints;          // 航点坐标列表
     size_t m_currentWaypointIndex = 0;         // 当前正在前往第几个航点
+
+    // ================= NPC 系统 =================
+    QVector<NpcItem*> m_npcList;  // 地图上所有 NPC 的指针列表
+    bool m_isTalking = false;     // 对话进行中（true 时冻结 WASD）
 };
 
 } // namespace graphics

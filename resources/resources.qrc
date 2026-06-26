@@ -3,5 +3,6 @@
         <file>campus_map.png</file>
         <file>map_data_fuben.json</file>
         <file>character.png</file>
+        <file>npc.png</file>
     </qresource>
 </RCC>
