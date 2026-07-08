@@ -46,6 +46,7 @@ std::vector<int> Pathfinder::findShortestPath(int startId, int endId) {
         if (currentDist > distances[currentId]) continue;
 
         const Node* currentNode = m_graph.getNode(currentId);
+        //检查是否为空节点
         if (!currentNode) continue;
 
         // 遍历当前节点的所有邻居

@@ -66,7 +66,7 @@ void MapView::setupBackground() {
     m_nightOverlay->setVisible(false);
 }
 
-// 👇 新增：对外接口
+// 对外接口
 void MapView::setNightMode(bool isNight) {
     if (m_nightOverlay) {
         m_nightOverlay->setVisible(isNight);
@@ -159,7 +159,7 @@ void MapView::drawPath(const std::vector<int>& pathNodeIds) {
 
     const auto& graph = m_campusMap.getGraph();
 
-    // 设置高亮画笔：粗壮、红色、圆滑线帽和拐角
+    // 设置高亮画笔：粗壮、绿色、圆滑线帽和拐角
     QPen pathPen(QColor(57, 255, 20, 220));
     pathPen.setWidth(4);
     pathPen.setCapStyle(Qt::RoundCap);
@@ -187,7 +187,7 @@ void MapView::clearPath() {
     m_pathItems.clear();
 }
 
-// 👇 新增方法实现
+// 角色速度更改方法实现
 void MapView::setCharacterSpeed(qreal speed) {
     if (m_character) {
         m_character->setSpeed(speed);

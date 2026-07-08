@@ -10,7 +10,7 @@ class CharacterItem : public QGraphicsObject {
     Q_OBJECT
 
 public:
-    // 定义 4 个朝向（对应精灵图的 4 行，顺序需根据你的实际图片调整，通常RPG是下左右上）
+    // 定义 4 个朝向（对应精灵图的 4 行，分别为上、下、左、右）
     enum Direction {
         Down = 0,
         Up = 1,
@@ -30,10 +30,10 @@ public:
     // 手动控制角色移动的接口
     void moveByOffset(qreal dx, qreal dy);
 
-    // 👇 新增：设置角色速度的接口
+    // 设置角色速度的接口
     void setSpeed(qreal speed);
 
-    // 👇 新增：接收从 MapView 传来的移动状态，用于更新朝向和动画
+    // 新增：接收从 MapView 传来的移动状态，用于更新朝向和动画
     void updateAnimationState(qreal dx, qreal dy);
 
 private:

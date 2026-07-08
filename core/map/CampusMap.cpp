@@ -47,8 +47,6 @@ bool CampusMap::loadFromJson(const QString& filePath) {
         int y = nodeObj["y"].toInt();
 
         // 将纯净的路径节点加入图中（不携带建筑业务数据）
-        // 如果你的 Graph::addNode 依然要求传 name 和 info，请写为 m_graph.addNode(id, "", "", x, y);
-        // 根据我们之前的重构，这里应该是纯坐标传入：
         m_graph.addNode(id, x, y);
     }
 
@@ -64,7 +62,7 @@ bool CampusMap::loadFromJson(const QString& filePath) {
         const Node* n2 = m_graph.getNode(toId);
 
         if (n1 && n2) {
-            // 【高级技巧】利用勾股定理 (hypot) 自动计算两点间的像素距离作为寻路权重
+            // 利用勾股定理 (hypot) 自动计算两点间的像素距离作为寻路权重
             double distance = std::hypot(n1->x - n2->x, n1->y - n2->y);
             m_graph.addUndirectedEdge(fromId, toId, distance);
         } else {

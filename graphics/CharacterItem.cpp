@@ -1,6 +1,5 @@
 #include "CharacterItem.h"
-#include <algorithm> // 👇 新增：必须包含这个标准库，才能使用 C++17 的 std::clamp
-#include <QGraphicsScene> // 👇 新增：为了获取 scene()
+#include <QGraphicsScene> //用于获取scene
 
 namespace graphics {
 
@@ -11,13 +10,12 @@ CharacterItem::CharacterItem(QGraphicsItem* parent)
 {
     setZValue(5.0);
 
-    // 1. 加载精灵图（请确保文件路径与你的 qrc 中一致！）
+    // 1. 加载精灵图（请确保文件路径与 qrc 中一致！）
     if (!m_spriteSheet.load(":/character.png")) {
         qWarning("警告：未找到角色精灵图，请检查资源文件！");
     }
 
-    // 2. 假设你的精灵图是标准的 4行(方向) x 4列(动作帧)
-    // 请根据你找的实际图片修改 m_maxFrames 的值（3 或 4）
+    // 2. 精灵图是标准的 4行(方向) x 8列(动作帧)
     m_maxFrames = 8;
 
     if (!m_spriteSheet.isNull()) {
@@ -32,20 +30,20 @@ CharacterItem::CharacterItem(QGraphicsItem* parent)
 
 QRectF CharacterItem::boundingRect() const {
     // 绘图区域就是单个动作帧的大小。
-    // 为了让角色的脚底对准坐标点，我们把原点 (0,0) 设在角色脚底中心。
+    // 为了让角色的脚底对准坐标点，把原点 (0,0) 设在角色脚底中心。
     return QRectF(-m_frameWidth / 2.0, -m_frameHeight, m_frameWidth, m_frameHeight);
 }
 
 void CharacterItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
     if (m_spriteSheet.isNull()) {
-        // 如果图没加载成功，画个红框提示你
+        // 如果图没加载成功，画个红框提示
         painter->setBrush(Qt::red);
         painter->drawRect(boundingRect());
         return;
     }
 
     // 🌟 核心魔法：只裁剪精灵图的一小块进行绘制
-    // 目标区域：画在我们定义的 boundingRect 上
+    // 目标区域：画在定义的 boundingRect 上
     QRectF targetRect = boundingRect();
 
     // 源图区域：计算当前帧在原大图上的坐标
@@ -65,11 +63,11 @@ void CharacterItem::moveByOffset(qreal dx, qreal dy) {
     // 2. 边界检测（空气墙逻辑）
     // 如果角色已经被添加到了地图场景中，scene() 将不会为空
     if (scene()) {
-        // 获取当前地图场景的真实物理边界（也就是你的 1774x887）
+        // 获取当前地图场景的真实物理边界（1774x887）
         QRectF mapBounds = scene()->sceneRect();
 
         // 计算内边距，防止小人“半个身子”出界
-        // 因为我们的原点 (0,0) 设置在小人脚底正中心，所以：
+        // 因为原点 (0,0) 设置在小人脚底正中心，所以：
         qreal paddingX = m_frameWidth / 2.0;  // 左右各留半个身位
         qreal paddingY = m_frameHeight;       // 顶部留一整个身高（防止头出界）
         qreal bottomPadding = 5.0;            // 底部留一点点脚底边距
@@ -115,7 +113,7 @@ void CharacterItem::updateAnimationState(qreal dx, qreal dy) {
 
     // 3. 动画切帧降速器 (控制小人的“倒腾腿”频率)
     m_animationTick++;
-    int frameSpeed = (m_speed > 5.0) ? 3 : 6; // 跑得快，切帧就快(5tick)；走得慢，切帧就慢(10tick)
+    int frameSpeed = (m_speed > 3.0) ? 3 : 6; // 跑得快，切帧就快(3tick)；走得慢，切帧就慢(6tick)
 
     if (m_animationTick >= frameSpeed) {
         m_animationTick = 0;

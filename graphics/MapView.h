@@ -1,12 +1,12 @@
 #pragma once
 #include <QGraphicsView>
 #include <QGraphicsScene>
-#include <QTimer> // 👇 新增：定时器
-#include <QSet>   // 👇 新增：集合容器，用来装按下的按键
+#include <QTimer> //定时器
+#include <QSet>   //集合容器，用来装按下的按键
 #include <QVector>
 
-#include "CharacterItem.h" // 👇 引入角色头文件
-#include "NpcItem.h"       // 👇 引入 NPC 头文件
+#include "CharacterItem.h" //引入角色头文件
+#include "NpcItem.h"       //引入 NPC 头文件
 
 #include "../core/map/CampusMap.h" // 引入 CampusMap
 
@@ -23,44 +23,44 @@ public:
     // 新增：清除高亮路径
     void clearPath();
 
-    // 👇 新增：获取角色的指针（为了后续自动导航用）
+    // 获取角色的指针（为了后续自动导航用）
     CharacterItem* getCharacter() const { return m_character; }
 
-    // 👇 新增：让外界控制角色速度
+    // 让外界控制角色速度
     void setCharacterSpeed(qreal speed);
 
-    // 👇 新增：启动和停止自动导航的接口
+    // 启动和停止自动导航的接口
     void startAutoNavigation(const std::vector<int>& pathNodeIds);
     void stopAutoNavigation();
 
-    // 👇 新增：向外提供切换昼夜的接口
+    // 向外提供切换昼夜的接口
     void setNightMode(bool isNight);
 
-    // 👇 新增：添加 NPC 到地图
+    // 添加 NPC 到地图
     void addNpc(NpcItem* npc);
 
-    // 👇 新增：对话状态切换（true=冻结WASD）
+    // 对话状态切换（true=冻结WASD）
     void setTalkingMode(bool isTalking);
 
 signals:
     void buildingClicked(int buildingId);
 
-    // 👇 新增：当角色走到终点时，发射此信号通知外界
+    // 当角色走到终点时，发射此信号通知外界
     void autoNavigationFinished();
 
-    // 👇 新增：当玩家靠近 NPC 时，发射此信号
+    // 当玩家靠近 NPC 时，发射此信号
     void npcTriggered(NpcItem* npc);
 
 protected:
     void wheelEvent(QWheelEvent* event) override;
     void mousePressEvent(QMouseEvent *event) override;
 
-    // 👇 修改：不再在 KeyPress 里直接移动，而是记录按键状态
+    // 不再在 KeyPress 里直接移动，而是记录按键状态
     void keyPressEvent(QKeyEvent *event) override;
-    // 👇 新增：按键松开事件
+    // 按键松开事件
     void keyReleaseEvent(QKeyEvent *event) override;
 
-private slots: // 👇 新增：必须是 slot，才能和 QTimer 配合
+private slots: // 必须是 slot，才能和 QTimer 配合
     // 🌟 游戏主循环：每 16ms 触发一次，处理平滑移动和相机跟随
     void gameLoop();
 
@@ -69,7 +69,7 @@ private:
     void renderGraph();     // 现在只画路（线段）和纯节点（小圆点）
     void renderBuildings(); // 新增：专门画建筑（名字）
 
-    // 👇 新增：夜间滤镜图元
+    // 夜间滤镜图元
     QGraphicsRectItem* m_nightOverlay = nullptr;
 
 private:
@@ -81,7 +81,7 @@ private:
 
     CharacterItem* m_character; // 🚶 我们的主角
 
-    // 👇 新增：状态机数据
+    // 状态机数据
     QSet<int> m_pressedKeys; // 记录当前一直被按住的按键 (如 Qt::Key_W)
     QTimer* m_gameTimer;     // 驱动移动的时钟引擎
 

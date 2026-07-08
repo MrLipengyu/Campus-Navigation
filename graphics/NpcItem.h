@@ -9,7 +9,7 @@ namespace graphics {
 
 // NPC 的数据包（名字、对话内容、位置、触发半径）
 struct NpcData {
-    QString  name;            // NPC 识别名 (如 "mad_professor")
+    QString  name;            // NPC 识别名
     QString  displayName;     // 对话框上显示的名字
     QPointF  position;        // 场景坐标
     qreal    triggerRadius;   // 靠近触发的距离（单位：像素）
@@ -22,10 +22,10 @@ class NpcItem : public QGraphicsObject {
 public:
     explicit NpcItem(const NpcData& data, QGraphicsItem* parent = nullptr);
 
-    // 必须重写：碰撞/刷新边界
+    // 碰撞/刷新边界
     QRectF boundingRect() const override;
 
-    // 必须重写：绘制 NPC
+    // 绘制 NPC
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
 
     // 获取 NPC 数据（供 MapView 判断触发）
