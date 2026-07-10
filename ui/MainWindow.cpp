@@ -8,6 +8,7 @@
 #include <QMessageBox>
 #include <QResizeEvent>
 #include <QDateTime>
+#include <QRandomGenerator>
 
 namespace ui {
 
@@ -499,11 +500,34 @@ void MainWindow::onNpcTriggered(graphics::NpcItem* npc) {
     // 冻结玩家移动
     m_mapView->setTalkingMode(true);
 
-    QVector<QString> lines;
-    lines << QString::fromUtf8("「站住！……开玩笑的，我只是太久没人搭理了。」");
-    lines << QString::fromUtf8("「这学校是我的领地——当然，保安大叔不这么认为。」");
-    lines << QString::fromUtf8("「迷路了吗？用导航，别靠直觉——我见过太多靠直觉绕了半小时的学生。」");
-    lines << QString::fromUtf8("「好了，去吧，我继续看风景。」");
+    // 准备一个随机对话库
+    QVector<QVector<QString>> dialogueBank = {
+        {
+            QString::fromUtf8("「站住！……开玩笑的，我只是太久没人搭理了。」"),
+            QString::fromUtf8("「这学校是我的领地——当然，保安大叔不这么认为。」"),
+            QString::fromUtf8("「迷路了吗？用导航，别靠直觉——我见过太多靠直觉绕了半小时的学生。」"),
+            QString::fromUtf8("「好了，去吧，我继续看风景。」")
+        },
+        {
+            QString::fromUtf8("「今天的天气真不错，非常适合在校园里散步。」"),
+            QString::fromUtf8("「你听说了吗？图书馆最近进了不少新书，可以去看看。」"),
+            QString::fromUtf8("「如果你现在要去食堂，建议你换个时间，那边现在人山人海！」")
+        },
+        {
+            QString::fromUtf8("「同学你好！」"),
+            QString::fromUtf8("「我在等一个朋友，但是他已经迟到半个小时了……」"),
+            QString::fromUtf8("「这校园太大了，他八成是没看导航迷路了。」")
+        },
+        {
+            QString::fromUtf8("「有什么需要帮忙的吗？」"),
+            QString::fromUtf8("「虽然我只是个在街边挂机的NPC，但我对这里了如指掌。」"),
+            QString::fromUtf8("「你想知道什么？不过抱歉，我并没有被设计成能回答问题的样子。」")
+        }
+    };
+
+    // 随机选择一段对话
+    int randomIndex = QRandomGenerator::global()->bounded(dialogueBank.size());
+    QVector<QString> lines = dialogueBank[randomIndex];
 
     // 定位并弹出对话框
     positionDialogWidget();
