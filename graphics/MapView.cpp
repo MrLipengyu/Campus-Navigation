@@ -1,6 +1,9 @@
 #include "MapView.h"
 
 #include <QKeyEvent>
+#include <QPainter>
+#include <QRandomGenerator>
+#include <QDateTime>
 #include <QDebug>
 #include <cmath> // 用于 std::hypot 计算向量长度
 
@@ -38,6 +41,19 @@ MapView::MapView(const core::CampusMap& campusMap, QWidget* parent)
     connect(m_gameTimer, &QTimer::timeout, this, &MapView::gameLoop);
     // 开启定时器，16毫秒执行一次，即 1000ms / 16ms ≈ 60 FPS (60帧/秒)
     m_gameTimer->start(16);
+
+    // ================== 🌤️ 天气系统初始化 ==================
+    m_weatherTimer = new QTimer(this);
+    m_weatherTimer->setSingleShot(true);
+    connect(m_weatherTimer, &QTimer::timeout, this, &MapView::onRandomWeatherTick);
+
+    // ================== 🌙 昼夜自动同步初始化 ==================
+    m_dayNightSyncTimer = new QTimer(this);
+    // 每 60 秒检测一次系统时间，处理对 6:00/18:00 边界的跨越
+    connect(m_dayNightSyncTimer, &QTimer::timeout, this, &MapView::syncDayNightWithSystemTime);
+    m_dayNightSyncTimer->start(60000);
+    // 立即执行一次，确保启动时昼夜状态就已同步
+    syncDayNightWithSystemTime();
 }
 
 void MapView::setupBackground() {
@@ -220,6 +236,12 @@ void MapView::keyReleaseEvent(QKeyEvent *event) {
 }
 
 void MapView::gameLoop() {
+    // ================== 🌤️ 天气粒子更新（优先运行，不受其他状态影响）==================
+    if (m_weather.currentWeather() != WeatherType::Sunny && viewport()) {
+        m_weather.update(viewport()->size());
+        viewport()->update(); // 触发 paintEvent 重绘粒子
+    }
+
     // ================== NPC 冷却 Tick ==================
     // 每帧更新所有 NPC 的冷却计时器
     for (auto* npc : m_npcList) {
@@ -422,6 +444,78 @@ void MapView::setTalkingMode(bool isTalking) {
         // 解冻时清空按键待机队列，防止角色突然冲出去
         m_pressedKeys.clear();
     }
+}
+
+// ================== 🌤️ 天气系统新增方法 ==================
+
+void MapView::paintEvent(QPaintEvent* event) {
+    // 先调父类绘制場景，再在最顶层叠加粒子
+    QGraphicsView::paintEvent(event);
+    if (m_weather.currentWeather() != WeatherType::Sunny && viewport()) {
+        QPainter painter(viewport());
+        m_weather.render(painter, viewport()->size());
+    }
+}
+
+void MapView::setWeather(WeatherType type) {
+    m_weather.setWeather(type);
+    if (viewport()) viewport()->update(); // 天气切换时强制重绘（清除或显示粒子）
+    emit weatherChanged(type);
+}
+
+WeatherType MapView::currentWeather() const {
+    return m_weather.currentWeather();
+}
+
+void MapView::setRandomWeather(bool enabled) {
+    m_randomWeatherEnabled = enabled;
+    if (enabled) {
+        // 开关后 5~15 秒内触发首次天气事件
+        int firstDelay = 5000 + static_cast<int>(QRandomGenerator::global()->bounded(10000));
+        m_weatherTimer->start(firstDelay);
+    } else {
+        m_weatherTimer->stop();
+    }
+}
+
+void MapView::onRandomWeatherTick() {
+    if (!m_randomWeatherEnabled) return;
+
+    // 按权重随机选择天气：晴 60% / 雨 15% / 雪 25%
+    int roll = static_cast<int>(QRandomGenerator::global()->bounded(100));
+    WeatherType newType;
+    if      (roll < 60) newType = WeatherType::Sunny; // 0~59  → 60%
+    else if (roll < 75) newType = WeatherType::Rain;  // 60~74 → 15%
+    else                newType = WeatherType::Snow;  // 75~99 → 25%
+
+    setWeather(newType);
+    qDebug() << "[Weather] 随机天气 roll=" << roll
+             << "切换为:" << (newType == WeatherType::Sunny ? "☀️晴天" :
+                                      newType == WeatherType::Rain  ? "🌧️雨天" : "❄️雪天");
+
+    // 30~90 秒后再次触发
+    int nextMs = 30000 + static_cast<int>(QRandomGenerator::global()->bounded(60001));
+    m_weatherTimer->start(nextMs);
+}
+
+// ================== 🌙 昼夜自动同步 ==================
+
+void MapView::syncDayNightWithSystemTime() {
+    // 读取系统本地时间（会自动处理时区）
+    int hour = QDateTime::currentDateTime().time().hour();
+
+    // 6:00~17:59 为白天，18:00~5:59 为夜晚
+    bool isNight = (hour < 6 || hour >= 18);
+
+    // 只在状态实际发生变化时才刻新，避免每分钟无谓重绘
+    if (isNight == m_isNight) return;
+    m_isNight = isNight;
+
+    setNightMode(isNight);
+    emit dayNightChanged(isNight);
+
+    qDebug() << "[DayNight] 系统时刻:" << hour << "时 →"
+             << (isNight ? "🌙 切换为夜晚模式" : "☀️ 切换为白天模式");
 }
 
 } // namespace graphics

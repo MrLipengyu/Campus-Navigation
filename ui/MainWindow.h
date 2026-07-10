@@ -62,6 +62,12 @@ private slots:
     // 👇 新增：响应对话结束事件
     void onDialogFinished();
 
+    // 👇 新增：随机天气发生后同步 RadioButton 状态
+    void onWeatherChanged(graphics::WeatherType type);
+
+    // 👇 新增：昼夜自动切换后更新状态标签
+    void onDayNightChanged(bool isNight);
+
 private:
     void setupUI();
     // 👇 新增方法：初始化自动补全器数据
@@ -101,13 +107,20 @@ private:
     QRadioButton* m_radioWalk;    // 步行单选钮
     QRadioButton* m_radioRun;     // 奔跑单选钮
 
-    // 👇 新增：昼夜切换开关
-    QCheckBox* m_checkNightMode;
+    // 👇 昼夜自动同步：显示当前昼夜状态（替代旧的手动复选框）
+    QLabel* m_lblDayNightStatus;
 
     // 👇 新增：算法选择面板
     QGroupBox*    m_algoGroup;      // "🧭 寻路算法"分组框
     QRadioButton* m_radioDijkstra;  // Dijkstra 单选钮
     QRadioButton* m_radioAStar;     // A* 单选钮
+
+    // 👇 新增：天气系统面板
+    QGroupBox*    m_weatherGroup;       // "🌤️ 天气系统"分组框
+    QRadioButton* m_radioSunny;         // ☀️ 晴天
+    QRadioButton* m_radioRain;          // 🌧️ 雨天
+    QRadioButton* m_radioSnow;          // ❄️ 雪天
+    QCheckBox*    m_checkRandomWeather; // 🎲 随机天气事件
 
     // 👇 新增：悬浮对话框
     DialogWidget* m_dialogWidget = nullptr;

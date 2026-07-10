@@ -7,6 +7,7 @@
 #include <QTextEdit>
 #include <QMessageBox>
 #include <QResizeEvent>
+#include <QDateTime>
 
 namespace ui {
 
@@ -53,6 +54,28 @@ MainWindow::MainWindow(core::CampusMap& campusMap, QWidget *parent)
         if (checked)
             m_navCtrl->setAlgorithm(controller::AlgorithmType::AStar);
     });
+
+    // ================= 天气系统信号绑定 =================
+
+    // 天气手动切换：RadioButton → MapView::setWeather
+    connect(m_radioSunny, &QRadioButton::toggled, this, [this](bool checked) {
+        if (checked) m_mapView->setWeather(graphics::WeatherType::Sunny);
+    });
+    connect(m_radioRain, &QRadioButton::toggled, this, [this](bool checked) {
+        if (checked) m_mapView->setWeather(graphics::WeatherType::Rain);
+    });
+    connect(m_radioSnow, &QRadioButton::toggled, this, [this](bool checked) {
+        if (checked) m_mapView->setWeather(graphics::WeatherType::Snow);
+    });
+
+    // 随机天气开关
+    connect(m_checkRandomWeather, &QCheckBox::toggled, this, [this](bool checked) {
+        m_mapView->setRandomWeather(checked);
+    });
+
+    // 随机天气触发后 → 同步 UI RadioButton（防止与手动切换形成信号循环）
+    connect(m_mapView, &graphics::MapView::weatherChanged,
+            this, &MainWindow::onWeatherChanged);
 
     // ================= NPC 系统初始化 =================
 
@@ -115,11 +138,18 @@ void MainWindow::setupUI() {
     line->setStyleSheet("color: #bdc3c7;");
     envLayout->addWidget(line);
 
-    // 1.2 昼夜滤镜系统开关
-    m_checkNightMode = new QCheckBox("🌙 开启夜间模式", this);
-    m_checkNightMode->setFont(QFont("Microsoft YaHei", 10, QFont::Bold));
-    m_checkNightMode->setStyleSheet("color: #2c3e50; margin-top: 5px;");
-    envLayout->addWidget(m_checkNightMode);
+    // 1.2 昼夜状态显示标签（读取系统时间自动切换，无需手动操作）
+    m_lblDayNightStatus = new QLabel(this);
+    m_lblDayNightStatus->setFont(QFont("Microsoft YaHei", 10, QFont::Bold));
+    m_lblDayNightStatus->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    m_lblDayNightStatus->setWordWrap(true);
+    m_lblDayNightStatus->setStyleSheet(
+        "QLabel { background: #f0f4f8; border-radius: 6px; "
+        "padding: 6px 8px; color: #2c3e50; margin-top: 4px; }"
+    );
+    // 初始显示占位文本，构造后由 syncDayNightWithSystemTime 覆盖
+    m_lblDayNightStatus->setText("⏳ 昼夜同步中...");
+    envLayout->addWidget(m_lblDayNightStatus);
 
     envLayout->addStretch(); // 保持把按鈕往上顶
     leftPanelLayout->addWidget(m_envGroup);
@@ -151,6 +181,42 @@ void MainWindow::setupUI() {
     algoLayout->addStretch();
 
     leftPanelLayout->addWidget(m_algoGroup);
+
+    // 1.4 天气系统分组
+    m_weatherGroup = new QGroupBox("🌤️ 天气系统", this);
+    m_weatherGroup->setFont(QFont("Microsoft YaHei", 10, QFont::Bold));
+    m_weatherGroup->setStyleSheet("QGroupBox { border: 1px solid #bdc3c7; border-radius: 5px; margin-top: 10px; padding-top: 15px; } "
+                                  "QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px; color: #34495e; }");
+
+    QVBoxLayout* weatherLayout = new QVBoxLayout(m_weatherGroup);
+    weatherLayout->setSpacing(8);
+
+    m_radioSunny = new QRadioButton("☀️ 晴天", this);
+    m_radioRain  = new QRadioButton("🌧️ 雨天", this);
+    m_radioSnow  = new QRadioButton("❄️ 雪天", this);
+    m_radioSunny->setFont(QFont("Microsoft YaHei", 10));
+    m_radioRain->setFont(QFont("Microsoft YaHei", 10));
+    m_radioSnow->setFont(QFont("Microsoft YaHei", 10));
+    m_radioSunny->setChecked(true); // 默认晴天
+
+    m_checkRandomWeather = new QCheckBox("🎲 随机天气事件", this);
+    m_checkRandomWeather->setFont(QFont("Microsoft YaHei", 10));
+    m_checkRandomWeather->setStyleSheet("color: #8e44ad; margin-top: 4px;");
+
+    // 权重说明标签
+    QLabel* weatherHint = new QLabel("随机权重：晴60% 雨15% 雪25%\n每30~90秒自动切换。", this);
+    weatherHint->setFont(QFont("Microsoft YaHei", 9));
+    weatherHint->setStyleSheet("color: #7f8c8d; margin-top: 2px;");
+    weatherHint->setWordWrap(true);
+
+    weatherLayout->addWidget(m_radioSunny);
+    weatherLayout->addWidget(m_radioRain);
+    weatherLayout->addWidget(m_radioSnow);
+    weatherLayout->addWidget(m_checkRandomWeather);
+    weatherLayout->addWidget(weatherHint);
+    weatherLayout->addStretch();
+
+    leftPanelLayout->addWidget(m_weatherGroup);
     leftPanelLayout->addStretch();
 
     // ================= 2. 中间：地图核心显示区 =================
@@ -250,19 +316,11 @@ void MainWindow::setupUI() {
         if (checked) m_mapView->setCharacterSpeed(4.0); // 奔跑速度
     });
 
-    // 昼夜滤镜切换
-    connect(m_checkNightMode, &QCheckBox::toggled, this, [this](bool checked) {
-        m_mapView->setNightMode(checked);
-        if (checked) {
-            m_checkNightMode->setText("☀️ 切换为日间模式");
-            m_checkNightMode->setStyleSheet("color: #f39c12; margin-top: 5px;");
-        } else {
-            m_checkNightMode->setText("🌙 开启夜间模式");
-            m_checkNightMode->setStyleSheet("color: #2c3e50; margin-top: 5px;");
-        }
-    });
+    // 昼夜自动切换信号绑定（由 MapView 内置定时器驱动，不需手动控制）
+    connect(m_mapView, &graphics::MapView::dayNightChanged,
+            this, &MainWindow::onDayNightChanged);
 
-    // 按钮槽函数绑定
+    // 按鈕槽函数绑定
     connect(m_btnSetStart, &QPushButton::clicked, this, &MainWindow::onBtnSetStartClicked);
     connect(m_btnAddDest, &QPushButton::clicked, this, &MainWindow::onBtnAddDestClicked);
     connect(m_btnStartNav, &QPushButton::clicked, this, &MainWindow::onBtnStartNavClicked);
@@ -466,6 +524,47 @@ void MainWindow::positionDialogWidget() {
     int x = mapViewPos.x() + (mapW - dlgW) / 2;
     int y = mapViewPos.y() + mapH - dlgH - 20;
     m_dialogWidget->move(x, y);
+}
+
+// ======================== 天气系统槽函数 ========================
+
+void MainWindow::onWeatherChanged(graphics::WeatherType type) {
+    // 暂时阻断三个 RadioButton 的 toggled 信号，防止更新 UI 时反向触发 setWeather
+    m_radioSunny->blockSignals(true);
+    m_radioRain->blockSignals(true);
+    m_radioSnow->blockSignals(true);
+
+    switch (type) {
+    case graphics::WeatherType::Sunny: m_radioSunny->setChecked(true); break;
+    case graphics::WeatherType::Rain:  m_radioRain->setChecked(true);  break;
+    case graphics::WeatherType::Snow:  m_radioSnow->setChecked(true);  break;
+    }
+
+    m_radioSunny->blockSignals(false);
+    m_radioRain->blockSignals(false);
+    m_radioSnow->blockSignals(false);
+}
+
+// ======================== 昼夜状态标签更新 ========================
+
+void MainWindow::onDayNightChanged(bool isNight) {
+    // 读取当前系统时刻用于标签显示
+    QTime now = QDateTime::currentDateTime().time();
+    QString timeStr = now.toString("HH:mm");
+
+    if (isNight) {
+        m_lblDayNightStatus->setText(
+            QString("🌙 夜间模式\n当前 %1").arg(timeStr));
+        m_lblDayNightStatus->setStyleSheet(
+            "QLabel { background: #1a1a2e; border-radius: 6px; "
+            "padding: 6px 8px; color: #a0aec0; margin-top: 4px; }");
+    } else {
+        m_lblDayNightStatus->setText(
+            QString("☀️ 白天模式\n当前 %1").arg(timeStr));
+        m_lblDayNightStatus->setStyleSheet(
+            "QLabel { background: #fff8e7; border-radius: 6px; "
+            "padding: 6px 8px; color: #b7791f; margin-top: 4px; }");
+    }
 }
 
 } // namespace ui

@@ -35,6 +35,9 @@ set(PROJECT_SOURCES
     graphics/MapView.h
     graphics/MapView.cpp
 
+    graphics/WeatherSystem.h
+    graphics/WeatherSystem.cpp
+
     graphics/CharacterItem.h
     graphics/CharacterItem.cpp
 
