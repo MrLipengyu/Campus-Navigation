@@ -104,6 +104,11 @@ private:
     // 👇 新增：昼夜切换开关
     QCheckBox* m_checkNightMode;
 
+    // 👇 新增：算法选择面板
+    QGroupBox*    m_algoGroup;      // "🧭 寻路算法"分组框
+    QRadioButton* m_radioDijkstra;  // Dijkstra 单选钮
+    QRadioButton* m_radioAStar;     // A* 单选钮
+
     // 👇 新增：悬浮对话框
     DialogWidget* m_dialogWidget = nullptr;
 };

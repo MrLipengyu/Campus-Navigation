@@ -27,6 +27,9 @@ set(PROJECT_SOURCES
     core/pathfinding/Dijkstra.h
     core/pathfinding/Dijkstra.cpp
 
+    core/pathfinding/AStar.h
+    core/pathfinding/AStar.cpp
+
     resources/resources.qrc
 
     graphics/MapView.h

@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <functional>
 #include "../graph/Graph.h"
 
 namespace core {
@@ -14,7 +15,9 @@ public:
     // 👇 新增：多终点近似 TSP 算法 (贪心最近邻)
     // destIds: 多个目标路网节点的 ID
     // outVisitOrder: 传出参数，用于返回算法实际计算出的访问顺序
-    std::vector<int> findTSPPath(int startId, std::vector<int> destIds, std::vector<int>& outVisitOrder);
+    // singlePathFn: 可选的外部单点寻路函数；为 nullptr 时使用 Dijkstra 自身
+    std::vector<int> findTSPPath(int startId, std::vector<int> destIds, std::vector<int>& outVisitOrder,
+                                 std::function<std::vector<int>(int, int)> singlePathFn = nullptr);
 
 private:
     // 👇 新增辅助方法：计算某一段路径的真实物理长度

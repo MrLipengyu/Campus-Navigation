@@ -107,7 +107,14 @@ double Pathfinder::calculatePathDistance(const std::vector<int>& path) {
 }
 
 // 🌟 核心扩展：TSP 近似算法 (贪心策略)
-std::vector<int> Pathfinder::findTSPPath(int startId, std::vector<int> destIds, std::vector<int>& outVisitOrder) {
+std::vector<int> Pathfinder::findTSPPath(int startId,
+                                         std::vector<int> destIds,
+                                         std::vector<int>& outVisitOrder,
+                                         std::function<std::vector<int>(int, int)> singlePathFn) {
+    // 若未传入外部寻路函数，默认使用 Dijkstra 自身
+    if (!singlePathFn) {
+        singlePathFn = [this](int s, int e) { return this->findShortestPath(s, e); };
+    }
     std::vector<int> fullPath;
     outVisitOrder.clear();
 
@@ -125,8 +132,8 @@ std::vector<int> Pathfinder::findTSPPath(int startId, std::vector<int> destIds, 
 
         // 遍历所有尚未访问的目的地，找到距离当前位置最近的
         for (size_t i = 0; i < destIds.size(); ++i) {
-            // 调用我们写好的 Dijkstra 算法计算当前点到该候选点的路径
-            std::vector<int> subPath = findShortestPath(currentStart, destIds[i]);
+            // 使用注入的寻路函数（Dijkstra 或 A*）计算当前点到该候选点的路径
+            std::vector<int> subPath = singlePathFn(currentStart, destIds[i]);
 
             if (subPath.empty()) continue; // 如果根本走不通，跳过
 

@@ -1,5 +1,6 @@
 #include "NavigationController.h"
 #include "../core/pathfinding/Dijkstra.h"
+#include "../core/pathfinding/AStar.h"
 #include <QDebug>
 
 namespace controller {
@@ -9,6 +10,11 @@ NavigationController::NavigationController(const core::CampusMap& campusMap, gra
 
     connect(&m_mapView, &graphics::MapView::autoNavigationFinished,
             this, &NavigationController::onNavigationFinished);
+}
+
+void NavigationController::setAlgorithm(AlgorithmType type) {
+    m_algorithm = type;
+    qDebug() << "[Controller] 算法已切换为:" << (type == AlgorithmType::AStar ? "A*" : "Dijkstra");
 }
 
 void NavigationController::setStartNode(int buildingId) {
@@ -54,8 +60,20 @@ void NavigationController::startMultiNavigation() {
     core::Pathfinder pathfinder(m_campusMap.getGraph());
     std::vector<int> visitOrderNodes; // 算法吐出的真实访问顺序
 
-    // 🌟 调用多目标 TSP 算法
-    std::vector<int> path = pathfinder.findTSPPath(startB->entrance_node_id, destNodeIds, visitOrderNodes);
+    // 🌟 根据用户选择的算法，构建对应的单点寻路函数
+    std::function<std::vector<int>(int, int)> singlePathFn;
+    if (m_algorithm == AlgorithmType::AStar) {
+        auto astar = std::make_shared<core::AStarPathfinder>(m_campusMap.getGraph());
+        singlePathFn = [astar](int s, int e) { return astar->findShortestPath(s, e); };
+        qDebug() << "[Controller] 正在使用 A* 算法解算路径...";
+    } else {
+        auto dijkstra = std::make_shared<core::Pathfinder>(m_campusMap.getGraph());
+        singlePathFn = [dijkstra](int s, int e) { return dijkstra->findShortestPath(s, e); };
+        qDebug() << "[Controller] 正在使用 Dijkstra 算法解算路径...";
+    }
+
+    // 🌟 调用 TSP 算法（每段子路径使用用户指定的算法）
+    std::vector<int> path = pathfinder.findTSPPath(startB->entrance_node_id, destNodeIds, visitOrderNodes, singlePathFn);
 
     if (path.empty()) {
         qDebug() << "[Controller] 错误：无法找到连通路径！";

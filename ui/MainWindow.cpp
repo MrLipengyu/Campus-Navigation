@@ -44,6 +44,16 @@ MainWindow::MainWindow(core::CampusMap& campusMap, QWidget *parent)
     connect(m_navCtrl, &controller::NavigationController::routeOrderUpdated,
             this, &MainWindow::onRouteOrderUpdated);
 
+    // 算法选择：RadioButton 切换 -> Controller 更新当前算法
+    connect(m_radioDijkstra, &QRadioButton::toggled, this, [this](bool checked) {
+        if (checked)
+            m_navCtrl->setAlgorithm(controller::AlgorithmType::Dijkstra);
+    });
+    connect(m_radioAStar, &QRadioButton::toggled, this, [this](bool checked) {
+        if (checked)
+            m_navCtrl->setAlgorithm(controller::AlgorithmType::AStar);
+    });
+
     // ================= NPC 系统初始化 =================
 
     // 1. 创建悬浮对话框（父对象为 this，自动居中对齐到 mapView 底部）
@@ -111,8 +121,36 @@ void MainWindow::setupUI() {
     m_checkNightMode->setStyleSheet("color: #2c3e50; margin-top: 5px;");
     envLayout->addWidget(m_checkNightMode);
 
-    envLayout->addStretch(); // 保持把按钮往上顶
+    envLayout->addStretch(); // 保持把按鈕往上顶
     leftPanelLayout->addWidget(m_envGroup);
+
+    // 1.3 算法选择分组
+    m_algoGroup = new QGroupBox("🧭 寻路算法", this);
+    m_algoGroup->setFont(QFont("Microsoft YaHei", 10, QFont::Bold));
+    m_algoGroup->setStyleSheet("QGroupBox { border: 1px solid #bdc3c7; border-radius: 5px; margin-top: 10px; padding-top: 15px; } "
+                               "QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px; color: #34495e; }");
+
+    QVBoxLayout* algoLayout = new QVBoxLayout(m_algoGroup);
+    algoLayout->setSpacing(10);
+
+    m_radioDijkstra = new QRadioButton("📊 Dijkstra (综合最短)", this);
+    m_radioAStar    = new QRadioButton("⚡ A* (启发式加速)", this);
+    m_radioDijkstra->setFont(QFont("Microsoft YaHei", 10));
+    m_radioAStar->setFont(QFont("Microsoft YaHei", 10));
+    m_radioDijkstra->setChecked(true); // 默认 Dijkstra
+
+    // 算法说明标签
+    QLabel* algoHint = new QLabel("两种算法均保证最短路径，\nA* 通常探索节点更少。", this);
+    algoHint->setFont(QFont("Microsoft YaHei", 9));
+    algoHint->setStyleSheet("color: #7f8c8d; margin-top: 4px;");
+    algoHint->setWordWrap(true);
+
+    algoLayout->addWidget(m_radioDijkstra);
+    algoLayout->addWidget(m_radioAStar);
+    algoLayout->addWidget(algoHint);
+    algoLayout->addStretch();
+
+    leftPanelLayout->addWidget(m_algoGroup);
     leftPanelLayout->addStretch();
 
     // ================= 2. 中间：地图核心显示区 =================
@@ -200,6 +238,9 @@ void MainWindow::setupUI() {
     mainLayout->addLayout(rightPanelLayout, 2);
 
     // ================= 5. UI 内部事件绑定 =================
+
+    // 算法选择信号绑定（此时 m_navCtrl 尚未初始化，在构造函数结尾连接）
+    // 注意：signal-slot 连接在 setupUI 之后的构造函数中完成，此处只注册内部 UI 事件
 
     // 角色速度切换
     connect(m_radioWalk, &QRadioButton::toggled, this, [this](bool checked){

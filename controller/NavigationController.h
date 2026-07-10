@@ -1,9 +1,13 @@
 #pragma once
 #include <QObject>
+#include <functional>
 #include "../core/map/CampusMap.h"
 #include "../graphics/MapView.h"
 
 namespace controller {
+
+// 算法类型枚举：控制导航时使用 Dijkstra 还是 A*
+enum class AlgorithmType { Dijkstra, AStar };
 
 class NavigationController : public QObject {
     Q_OBJECT
@@ -19,6 +23,9 @@ signals:
     void routeOrderUpdated(const QString& orderText);
 
 public slots:
+    // 切换寻路算法（由左侧面板 RadioButton 触发）
+    void setAlgorithm(AlgorithmType type);
+
     // 明确的显式指令槽函数
     void setStartNode(int buildingId);
 
@@ -36,6 +43,7 @@ private:
     const core::CampusMap& m_campusMap;
     graphics::MapView& m_mapView;
 
+    AlgorithmType m_algorithm = AlgorithmType::Dijkstra; // 默认使用 Dijkstra
     int m_startBuildingId = -1;
     std::vector<int> m_destBuildingIds; // 👇 终点变成了一个数组
 };
