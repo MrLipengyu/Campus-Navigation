@@ -22,6 +22,9 @@ MapView::MapView(const core::CampusMap& campusMap, QWidget* parent)
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); // 隐藏滚动条
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
+    // 开启全视口更新，解决悬浮 UI (小地图) 在局部重绘和滚动时的抖动及刷新不全问题
+    setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
+
     // 3. 按层级顺序绘制内容
     setupBackground();
     renderGraph();     // 画纯路网
@@ -63,8 +66,14 @@ void MapView::setupBackground() {
         QGraphicsPixmapItem* bgItem = m_scene->addPixmap(mapPixmap);
         bgItem->setZValue(0.0);
         m_scene->setSceneRect(mapPixmap.rect());
+        
+        // ================== 🗺️ 缓存小地图缩略图 ==================
+        m_minimapPixmap = mapPixmap.scaledToWidth(240, Qt::SmoothTransformation);
     } else {
         m_scene->setSceneRect(0, 0, 1920, 1080);
+        // 如果没有图片，创建一个纯色占位图作为小地图
+        m_minimapPixmap = QPixmap(240, 135);
+        m_minimapPixmap.fill(Qt::darkGray);
     }
 
     // ================== 🌟 新增：夜间滤镜层 ==================
@@ -449,12 +458,63 @@ void MapView::setTalkingMode(bool isTalking) {
 // ================== 🌤️ 天气系统新增方法 ==================
 
 void MapView::paintEvent(QPaintEvent* event) {
-    // 先调父类绘制場景，再在最顶层叠加粒子
+    // 先调父类绘制場景
     QGraphicsView::paintEvent(event);
-    if (m_weather.currentWeather() != WeatherType::Sunny && viewport()) {
-        QPainter painter(viewport());
+
+    if (!viewport()) return;
+
+    QPainter painter(viewport());
+    
+    // 1. 绘制天气粒子（全屏覆盖）
+    if (m_weather.currentWeather() != WeatherType::Sunny) {
         m_weather.render(painter, viewport()->size());
     }
+
+    // 2. 绘制右上角小地图
+    drawMiniMap(painter, viewport()->size());
+}
+
+// ================== 🗺️ 小地图绘制 ==================
+
+void MapView::drawMiniMap(QPainter& painter, const QSize& viewportSize) {
+    if (m_minimapPixmap.isNull() || !m_character) return;
+
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+
+    int margin = 20; // 距离右上角的边距
+    int mapW = m_minimapPixmap.width();
+    int mapH = m_minimapPixmap.height();
+    QRect mapRect(viewportSize.width() - mapW - margin, margin, mapW, mapH);
+
+    // 1. 画半透明的背景圆角矩形
+    painter.setPen(QPen(QColor(255, 255, 255, 100), 2));
+    painter.setBrush(QColor(30, 30, 30, 180));
+    painter.drawRoundedRect(mapRect.adjusted(-2, -2, 2, 2), 6, 6);
+
+    // 2. 绘制小地图底图
+    painter.drawPixmap(mapRect, m_minimapPixmap);
+
+    // 3. 计算并绘制玩家的当前位置（红点）
+    QRectF sceneR = m_scene->sceneRect();
+    if (sceneR.width() > 0 && sceneR.height() > 0) {
+        QPointF charPos = m_character->pos();
+        // 计算玩家在真实场景中的百分比位置
+        double pctX = charPos.x() / sceneR.width();
+        double pctY = charPos.y() / sceneR.height();
+
+        // 映射到小地图内部的坐标
+        double dotX = mapRect.left() + pctX * mapW;
+        double dotY = mapRect.top() + pctY * mapH;
+
+        // 画一个带白边的醒目红色圆点
+        painter.setPen(QPen(Qt::white, 1.5));
+        painter.setBrush(Qt::red);
+        painter.drawEllipse(QPointF(dotX, dotY), 4.0, 4.0);
+    }
+
+    painter.restore();
 }
 
 void MapView::setWeather(WeatherType type) {

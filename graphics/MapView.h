@@ -74,6 +74,9 @@ protected:
     // 天气粒子覆盖绘制：在场景之上叠加全屏粒子
     void paintEvent(QPaintEvent* event) override;
 
+    // 绘制小地图（在 paintEvent 中调用）
+    void drawMiniMap(QPainter& painter, const QSize& viewportSize);
+
 private slots: // 必须是 slot，才能和 QTimer 配合
     // 🌟 游戏主循环：每 16ms 触发一次，处理平滑移动和相机跟随
     void gameLoop();
@@ -89,6 +92,9 @@ private:
 
     // 夜间滤镜图元
     QGraphicsRectItem* m_nightOverlay = nullptr;
+
+    // 小地图底图缓存
+    QPixmap m_minimapPixmap;
 
 private:
     QGraphicsScene* m_scene;
